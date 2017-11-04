@@ -6,10 +6,13 @@
    flex-wrap: wrap;
 }
 
+.mark-hover:hover {
+   background-color: #1f2b33;
+   cursor: pointer;
+}
+
 .asset-overview {
-
-   padding: 5px;
-
+   padding: 5px 5px 0px 5px;
    border: 1px solid $border-color;
 
    @media screen and (min-width: 1500px) {
@@ -27,5 +30,46 @@
    @media screen and (max-width: 768px) {
       flex-basis: 100%;   
    }
-   
+
+   .primary-traded-pair {
+      .header {
+         font-size: 1.3rem;
+         display:flex;
+         flex-direction: row;
+         padding-bottom: 15px;
+         padding-left:3px;
+         padding-right:3px;
+
+         .percent-change {
+            margin-left:auto;
+         }
+      }
+   }
+
+   .primary-asset, .secondary-asset, .pair-price {
+      padding-right: 7px;
+   }
+
+   .secondary-asset {
+      color: darken($dark-foreground-color, 25%);
+   }
+
+   .percent-change {
+      &.up {
+         color: $light-green;
+      }
+
+      &.down {
+         color: $light-red;
+      }
+   }
+
+   exchange-asset-pair {
+      border-bottom: 1px solid $border-color;
+   }
+
+   .exchange-asset-pairs exchange-asset-pair:last-child {
+      border-bottom: none;
+   }
+
 }

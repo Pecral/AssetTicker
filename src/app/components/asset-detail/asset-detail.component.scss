@@ -1,0 +1,76 @@
+@import 'themes.scss';
+
+:host() {
+   display: flex;
+   flex-direction: column;
+}
+
+.exchange-config {
+  padding: 5px;
+  color: black;
+  background-color: darken($dark-background-color, 2%);
+  flex: 0 0 auto;
+}
+
+.panels-wrapper {
+  background-color: #15232c;
+  height: 100vh;
+  display:flex;
+  justify-content: space-between;
+  flex-wrap:wrap;
+  flex: 1 1 auto;
+}
+
+.order-book-wrapper {
+  display:flex;
+  flex: 0 0 285px;
+  overflow: hidden;
+  justify-content: center;
+
+  .order-book-depth {
+    flex: 0 1 00px;
+  }
+
+  .order-book-positions {
+    flex: 0 0 auto;
+    display:flex;
+    flex-direction: column;
+    height: calc(100vh - 48px);
+
+    .order-book-header {
+      margin-bottom: 0;
+
+      .book-position-price {
+        width: 80px;
+      }
+  
+      .book-position-volume {
+        width: 100px;
+      }        
+    }
+
+    .price-separator {
+      height: 35px;
+      font-size: 1.3rem;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .order-book-side-wrapper {
+      flex: 1;
+      overflow:hidden;
+    }
+  }
+}
+
+.trades-wrapper {
+  height: calc(100vh - 48px);
+  flex: 0 0 350px;
+}
+
+.chart-wrapper {
+  align-self:center;
+  flex: 1 0 500px;
+  height: 100%;  
+  overflow:hidden;
+}

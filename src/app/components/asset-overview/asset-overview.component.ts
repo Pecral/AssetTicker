@@ -2,14 +2,17 @@ import { TickerMessage } from './../../shared/models/ticker-message';
 import { ExchangeTickerType } from './../../shared/models/exchange-ticker-type';
 import { AssetPair } from './../../shared/models/asset-pair';
 import { ExchangeTickerHandlerService } from './../../shared/services/exchange-ticker-handler.service';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { ExchangeTicker } from '../../shared/services/exchange-ticker';
 import { Asset } from '../../shared/models/asset';
+import { ExchangeAssetPair } from '../../shared/models/exchange-asset-pair';
+import { Router } from '@angular/router';
 
 @Component({
    selector: 'asset-overview',
    templateUrl: './asset-overview.component.html',
-   styleUrls: ['./asset-overview.component.scss']
+   styleUrls: ['./asset-overview.component.scss'],
+   encapsulation: ViewEncapsulation.None
 })
 export class AssetOverviewComponent implements OnInit {
 
@@ -23,7 +26,7 @@ export class AssetOverviewComponent implements OnInit {
 
    private exchangeServices: ExchangeTicker[] = [];
 
-   constructor(private _exchangeHandler: ExchangeTickerHandlerService) {
+   constructor(private _exchangeHandler: ExchangeTickerHandlerService, private router: Router) {
 
    }
 
@@ -38,7 +41,7 @@ export class AssetOverviewComponent implements OnInit {
          exchange.websocketIsConnected.filter(isConnected => isConnected).subscribe(isConnected => {
             exchange.getAvailableAssetPairs().subscribe(pairs => {
                for (let pair of pairs) {
-                  if(pair.symbol.startsWith("LTC")) {
+                  // if(pair.symbol.startsWith("LTC")) {
                      let exchangeAssetPair = new ExchangeAssetPair();
                      exchangeAssetPair.exchange = ExchangeTickerType[exchange.exchangeType];
                      exchangeAssetPair.pair = pair;
@@ -47,19 +50,27 @@ export class AssetOverviewComponent implements OnInit {
                      exchange.subscribeToTickerMessages(pair.symbol).subscribe(tickerMessage => exchangeAssetPair.latestTicker = tickerMessage);
    
                      this.exchangeAssetPairs.push(exchangeAssetPair);
-                  }
+                  // }
                }
 
-               this.availableAssets = this.availableAssets.concat(pairs.filter(x => x.primaryAsset.shortcode.toUpperCase() == 'LTC').map(x => x.primaryAsset));
+               // this.availableAssets = this.availableAssets.concat(pairs.filter(x => x.primaryAsset.shortcode.toUpperCase() == 'LTC').map(x => x.primaryAsset));
+               this.availableAssets = this.availableAssets.concat(pairs.map(x => x.primaryAsset));
                //distinct
-               this.availableAssets = this.availableAssets.filter((asset, index) => this.availableAssets.indexOf(asset) == index);
+               this.availableAssets = this.availableAssets.filter((asset, index) => this.availableAssets.findIndex(as => as.shortcode == asset.shortcode) == index);
             });
          })
       }
    }
 
-   getExchangeAssetPairs(asset: Asset): ExchangeAssetPair[] {
-      return this.exchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode);
+   getExchangeAssetPairs(asset: Asset, excludePrimaryTradedPair: boolean): ExchangeAssetPair[] {
+      if(excludePrimaryTradedPair) {
+         let primarilyTradedPair = this.getPrimaryAssetPair(asset);
+
+         return this.exchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode && !(x.exchange == primarilyTradedPair.exchange && x.pair.symbol == primarilyTradedPair.pair.symbol));
+      }
+      else {
+         return this.exchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode);
+      }
    }
 
    /** Returns the primarily traded asset pair for this asset (USD or EUR based)
@@ -99,13 +110,8 @@ export class AssetOverviewComponent implements OnInit {
       }
    }
 
-}
+   navigateToExchangeAssetPair(exchangeAssetPair: ExchangeAssetPair):void {
+      this.router.navigate([`${exchangeAssetPair.exchange}/${exchangeAssetPair.pair.symbol}/15m`])
+   }
 
-//component-specific class, could be moved to a separate file
-class ExchangeAssetPair {
-   exchange: string;
-
-   pair: AssetPair;
-
-   latestTicker: TickerMessage;
 }

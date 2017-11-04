@@ -72,15 +72,13 @@ export class TechanLiveComponent implements OnInit {
    macdData: any;
    rsiData: any;
 
-   candleLimit: number = 150; //limit number of candles that should be displayed
+   candleLimit: number = 200; //limit number of candles that should be displayed
 
    private _symbolPair: string;
    @Input()
    set symbolPair(value: string) {
       if (this.currentExchange && this._symbolPair && value != this._symbolPair) {
-         this.candleSubscription.unsubscribe();
-         this.candlesSnapshotSubscription.unsubscribe();
-         this.currentExchange.unsubscribeFromAssetTrades(this._symbolPair);
+         this.unsubscribe();
       }
 
       this._symbolPair = value;
@@ -94,9 +92,7 @@ export class TechanLiveComponent implements OnInit {
    @Input()
    set exchangeTickerType(value: ExchangeTickerType) {
       if (this.currentExchange && this._symbolPair && value != this._exchangeTickerType) {
-         this.candleSubscription.unsubscribe();
-         this.candlesSnapshotSubscription.unsubscribe();
-         this.currentExchange.unsubscribeFromAssetTrades(this._symbolPair);
+         this.unsubscribe();
       }
 
       this._exchangeTickerType = value;
@@ -106,9 +102,21 @@ export class TechanLiveComponent implements OnInit {
       return this._exchangeTickerType;
    }
 
-   currentExchange: ExchangeTicker;
+   private _timeframe: string = '15m';
+   @Input()
+   set timeframe(value: string) {
+      if(this.currentExchange && this._symbolPair && value != this._timeframe) {
+         this.unsubscribe();
+      }
 
-   currentTimeframe: string = '1m';
+      this._timeframe = value;
+      this.subscribeToCandles();
+   }
+   get timeframe(): string {
+      return this._timeframe;
+   }
+
+   currentExchange: ExchangeTicker;
 
    timeframes = [
       { value: '1m', label: 'one minute' },
@@ -134,6 +142,14 @@ export class TechanLiveComponent implements OnInit {
       this.parentNativeElement = this.element.nativeElement;
    }
 
+   unsubscribe() {
+      if(this.candleSubscription && this.candlesSnapshotSubscription) {
+         this.candleSubscription.unsubscribe();
+         this.candlesSnapshotSubscription.unsubscribe();
+         this.currentExchange.unsubscribeFromCandles(this._symbolPair, this._timeframe);
+      }
+   }
+
    /** Load order book with the currently saved configuration */
    subscribeToCandles(): void {
       if (this._symbolPair && this._exchangeTickerType !== undefined) {
@@ -143,15 +159,15 @@ export class TechanLiveComponent implements OnInit {
          this.currentExchange.websocketIsConnected.subscribe(isConnected => {
             if (isConnected) {
                //wait till snapshot is received
-               this.candlesSnapshotSubscription = this.currentExchange.receivedCandlestickSnapshot(this._symbolPair, this.currentTimeframe).filter(hasReceived => hasReceived).subscribe(received => {
+               this.candlesSnapshotSubscription = this.currentExchange.receivedCandlestickSnapshot(this._symbolPair, this.timeframe).filter(hasReceived => hasReceived).subscribe(received => {
                   //save snapshot
-                  this.candles = this.currentExchange.getCandlesSnapshot(this._symbolPair, this.currentTimeframe).slice();
+                  this.candles = this.currentExchange.getCandlesSnapshot(this._symbolPair, this.timeframe).slice();
 
                   //load candles
                   this.loadCandleSticks();
 
                   //subscribe for new candles
-                  this.candleSubscription = this.currentExchange.subscribeToCandles(this._symbolPair, this.currentTimeframe).filter(candle => candle !== null).subscribe(candle => {
+                  this.candleSubscription = this.currentExchange.subscribeToCandles(this._symbolPair, this.timeframe).filter(candle => candle !== null).subscribe(candle => {
                      //if we already have a candle for this timestamp, we'll replace it
                      let position = this.candles.findIndex(x => x.date.getTime() == candle.date.getTime());
 
@@ -170,18 +186,8 @@ export class TechanLiveComponent implements OnInit {
    }
 
    /** Switch the candle stick's time frame */
-   switchTimeframe(timeFrame: any) {
-      if (timeFrame !== this.currentTimeframe) {
-         if (this.candleSubscription && !this.candleSubscription.closed) {
-
-            this.candleSubscription.unsubscribe();
-            this.currentExchange.unsubscribeFromCandles(this._symbolPair, this.currentTimeframe);
-
-            this.currentTimeframe = timeFrame;
-
-            this.subscribeToCandles();
-         }
-      }
+   switchTimeframe(newTimeframe: any) {
+      this.timeframe = newTimeframe;
    }
 
    loadCandleSticks() {

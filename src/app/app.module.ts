@@ -1,3 +1,4 @@
+import { ExchangeAssetPairComponent } from './components/asset-overview/exchange-asset-pair/exchange-asset-pair.component';
 import { AssetDetailComponent } from './components/asset-detail/asset-detail.component';
 import { AssetOverviewComponent } from './components/asset-overview/asset-overview.component';
 import { TechanLiveComponent } from './components/techan-live/techan-live.component';
@@ -38,6 +39,7 @@ const appRoutes: Routes = [
     AppComponent,
 
     AssetOverviewComponent,
+    ExchangeAssetPairComponent,
     AssetDetailComponent,
 
     OrderBookComponent,
@@ -54,7 +56,7 @@ const appRoutes: Routes = [
     HttpModule,
     FormsModule,
     BrowserAnimationsModule,
-   //  RouterModule.forRoot( appRoutes ),
+    RouterModule.forRoot( appRoutes ),
 
     AutoCompleteModule,
     DropdownModule,

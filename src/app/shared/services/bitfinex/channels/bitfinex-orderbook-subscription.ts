@@ -22,7 +22,7 @@ export class BitfinexOrderBookSubscription extends BitfinexChannelSubscription {
          }
       }
       else {
-         //this.synchronizeSingleOrder(message[1]);
+         this.synchronizeSingleOrder(message[1]);
       }
    }
 

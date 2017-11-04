@@ -7,13 +7,16 @@ export class CurrencyValueFormatterPipe implements PipeTransform {
 
    fiatCurrency: string[] = ['EUR', 'USD', 'GBP', 'JPY', 'RUB', 'KRW', 'INR'];
 
-   transform(value: number, symbol: string): string {
-      if(!value) {
-         return;
+   transform(valueString: any, symbol: string): any {
+      //sometimes we get a string as a value
+      let value: number = +valueString;
+
+      if(value == NaN) {
+         return valueString;
       }
 
-      if(value == 0) {
-         return value.toString();
+      if (!value || value == 0) {
+         return value
       }
 
       //if it's fiat, we only want to display 2 decimal places
@@ -31,8 +34,12 @@ export class CurrencyValueFormatterPipe implements PipeTransform {
          else if (value >= 100 && value < 1000) {
             return value.toFixed(3);
          }
-         else if(value > 10000) {
-            return ((value / 10000).toFixed(0) + 'k');
+         else if(value >= 1000000) {
+            return ((value / 1000000).toFixed(1) + 'M');
+         }
+
+         else if (value >= 10000) {
+            return ((value / 1000).toFixed(1) + 'k');
          }
          else {
             return value.toFixed(2);

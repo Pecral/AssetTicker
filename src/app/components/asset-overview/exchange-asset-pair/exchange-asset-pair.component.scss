@@ -1,0 +1,32 @@
+:host() {
+   display:flex;
+   flex-direction: row;
+   justify-content: space-between;
+   font-size: 14px;
+   padding: 3px;
+}
+
+.exchange {
+   flex-basis: 25%;
+}
+
+.asset-price-wrapper {
+   flex-basis: 35%;
+   display: flex;
+   overflow:hidden;
+
+   .pair-price {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+   }   
+}
+
+.volume {
+   flex-basis: 20%;
+}
+
+.percent-change {
+   flex-basis: 20%;
+   text-align: right;
+}

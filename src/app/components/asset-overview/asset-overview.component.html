@@ -1,23 +1,22 @@
 <div class="asset-overview-wrapper">
   <div class="asset-overview" *ngFor="let asset of availableAssets">
-    <div class="header">
-      <span class="primary-asset">{{asset.shortcode}}</span>
-      <span class="secondary-asset">{{getPrimaryAssetPair(asset).pair.secondaryAsset.shortcode}}</span>
-      <span class="pair-price">{{getPrimaryAssetPair(asset).latestTicker?.lastPrice | currencyValueFormatter: getPrimaryAssetPair(asset).pair.secondaryAsset.shortcode}}</span>
-      <span class="percent-change">{{getPrimaryAssetPair(asset).latestTicker?.dailyChangePercent.toFixed(2)}}</span>
-
-    </div>
-    <div class="candle-chart-wrapper">
-
-    </div>
-    <div class="exchange-asset-pairs">
-      <div class="exchange-asest-pair" *ngFor="let tradedPair of getExchangeAssetPairs(asset)">
-        <span class="exchange">{{tradedPair.exchange}}</span>
-        <span class="secondary-asset">{{tradedPair.pair.secondaryAsset.shortcode}}</span>
-        <span class="pair-price">{{tradedPair.latestTicker?.lastPrice | currencyValueFormatter: tradedPair.pair.secondaryAsset.shortcode}}</span>
-        <span class="volume">{{tradedPair.latestTicker?.volume.toFixed(0)}}</span>
-        <span class="percent-change">{{tradedPair.latestTicker?.dailyChangePercent.toFixed(2)}}</span>
+    <div class="primary-traded-pair mark-hover" (click)="navigateToExchangeAssetPair(getPrimaryAssetPair(asset))">
+      <div class="header">
+        <span class="primary-asset">{{asset.shortcode}}</span>
+        <span class="secondary-asset">{{getPrimaryAssetPair(asset).pair.secondaryAsset.shortcode}}</span>
+        <span class="pair-price">{{getPrimaryAssetPair(asset).latestTicker?.lastPrice | currencyValueFormatter: getPrimaryAssetPair(asset).pair.secondaryAsset.shortcode}}</span>
+        <span class="percent-change {{getPrimaryAssetPair(asset).latestTicker?.dailyChangePercent >= 0 ? 'up' : 'down'}}">{{getPrimaryAssetPair(asset).latestTicker?.dailyChangePercent.toFixed(2)}}%</span>
       </div>
+      <div class="candle-chart-wrapper">
+
+      </div>
+      <exchange-asset-pair class="primary" [exchangeAssetPair]="getPrimaryAssetPair(asset)">
+      </exchange-asset-pair>
+    </div>
+
+    <div class="exchange-asset-pairs">
+      <exchange-asset-pair class="mark-hover" *ngFor="let tradedPair of getExchangeAssetPairs(asset, true)" [exchangeAssetPair]="tradedPair" (click)="navigateToExchangeAssetPair(tradedPair)">
+      </exchange-asset-pair>
     </div>
   </div>
 </div>

@@ -13,17 +13,17 @@
   
           <td class="trade-column-time">{{trade.timestamp.toLocaleTimeString()}}</td>
           <td class="trade-column-price">
-            <span>{{trade.price}}
+            <span>{{trade.price | currencyValueFormatter : trade.secondaryAsset.shortcode}}
               <i *ngIf="hasFontAwesomeSymbol(trade.secondaryAsset.shortcode);else secondaryAssetFallback" class="fa fa-{{trade.secondaryAsset.shortcode.toLowerCase()}}"></i>
             </span>
           </td>
           <td class="trade-column-amount">
-            <span>{{trade.volume}}
+            <span>{{trade.volume | currencyValueFormatter}}
               <i *ngIf="hasFontAwesomeSymbol(trade.dominantAsset.shortcode);else primaryAssetFallback" class="fa fa-{{trade.dominantAsset.shortcode.toLowerCase()}}"></i>
             </span>
           </td>
           <td class="trade-column-value">
-            <span>~ {{(trade.price * trade.volume).toFixed(4)}}
+            <span>~ {{(trade.price * trade.volume) | currencyValueFormatter : trade.secondaryAsset.shortcode}}
               <i *ngIf="hasFontAwesomeSymbol(trade.secondaryAsset.shortcode);else secondaryAssetFallback" class="fa fa-{{trade.secondaryAsset.shortcode.toLowerCase()}}"></i>
             </span>
           </td>
