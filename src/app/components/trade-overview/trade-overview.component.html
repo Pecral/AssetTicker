@@ -1,0 +1,35 @@
+<div class="wrapper">
+  <div class="trades-overview-header">
+    <span class="trade-column-time">Time</span>
+    <span class="trade-column-price">Price</span>
+    <span class="trade-column-amount">Amount</span>
+    <span class="trade-column-value">Value</span>
+  </div>
+  <perfect-scrollbar class="trades-wrapper border-l border-t">
+      <table class="table table-sm table-striped">
+        <tr *ngFor="let trade of trades" class="trade-row {{trade.tradeType == 0 ? 'trade-buy' : 'trade-sell'}}">
+          <ng-template #secondaryAssetFallback>{{trade.secondaryAsset.shortcode}}</ng-template>
+          <ng-template #primaryAssetFallback>{{trade.dominantAsset.shortcode}}</ng-template>
+  
+          <td class="trade-column-time">{{trade.timestamp.toLocaleTimeString()}}</td>
+          <td class="trade-column-price">
+            <span>{{trade.price}}
+              <i *ngIf="hasFontAwesomeSymbol(trade.secondaryAsset.shortcode);else secondaryAssetFallback" class="fa fa-{{trade.secondaryAsset.shortcode.toLowerCase()}}"></i>
+            </span>
+          </td>
+          <td class="trade-column-amount">
+            <span>{{trade.volume}}
+              <i *ngIf="hasFontAwesomeSymbol(trade.dominantAsset.shortcode);else primaryAssetFallback" class="fa fa-{{trade.dominantAsset.shortcode.toLowerCase()}}"></i>
+            </span>
+          </td>
+          <td class="trade-column-value">
+            <span>~ {{(trade.price * trade.volume).toFixed(4)}}
+              <i *ngIf="hasFontAwesomeSymbol(trade.secondaryAsset.shortcode);else secondaryAssetFallback" class="fa fa-{{trade.secondaryAsset.shortcode.toLowerCase()}}"></i>
+            </span>
+          </td>
+        </tr>
+      </table>
+    </perfect-scrollbar>  
+    
+</div>
+

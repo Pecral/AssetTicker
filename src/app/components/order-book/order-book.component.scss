@@ -1,0 +1,90 @@
+@import 'themes.scss';
+
+// .order-book-side:not(.reversed) tr td, .order-book-side:not(.reversed) tr th {
+//    text-align: right;
+//    padding-right: 10px;
+// }
+
+// .order-book-side.reversed {
+//    direction: rtl;
+
+//    tr th, tr td {
+//       padding-left: 10px;
+//       text-align: left;  
+//    }
+// }
+
+.order-book-side {
+   display:flex;
+   flex-direction: column;
+   overflow:hidden;
+   padding: 0px 10px;
+   height: 100%;
+
+   .order-book-positions, ::ng-deep .order-book-positions .ps-content {
+      display:flex;
+      flex-direction: column;
+      flex: 0 0 auto;
+      overflow:hidden;
+   }
+
+   &.reversed-rows .order-book-positions, &.reversed-rows ::ng-deep .order-book-positions .ps-content  {
+      flex-direction: column-reverse;
+   }   
+
+   .order-book-header {
+      font-weight: bold;
+      flex: 0 0 25px;
+      padding-top: 5px;
+      display:flex;
+      flex-direction: row;
+
+      div {
+         text-align: right;
+      }
+
+      .price-header {
+         width: 75px;
+      }
+
+      .volume-header {
+         width: 100px;
+      }
+
+      .total-header {
+         width: 90px;
+         text-align: right;
+      }
+   }
+}
+
+.order-book-position {
+   height: 19px;
+   display:flex;
+   flex-direction: row;
+
+   div {
+      text-align: right;
+   }
+
+   .book-position-price {
+      width: 75px;
+   }
+
+   .book-position-volume {
+      width: 100px;
+   }
+
+   .book-position-total {
+      width: 90px;
+      text-align:right;  
+   }
+}
+
+.order-book-asks .book-position-price {
+   color: $light-red;
+}
+
+.order-book-bids .book-position-price {
+   color: $light-green;
+}

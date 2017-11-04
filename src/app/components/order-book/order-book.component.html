@@ -1,0 +1,22 @@
+<div *ngIf="orderBook" class="order-book-side" [ngClass]="{'reversed-rows': reversedRows, 'order-book-bids': bookSide == 'bids', 'order-book-asks': bookSide == 'asks' }">
+  <div class="order-book-header">
+    <div class="price-header">Price</div>
+    <div class="volume-header">Volume</div>
+    <div class="total-header">Total</div>
+  </div>
+  <div>
+   <perfect-scrollbar class="order-book-positions">
+      <div *ngFor="let position of getBookSide()" class="order-book-position">
+         <div class="book-position-price">
+            {{position.price.toFixed(3)}}
+         </div>
+         <div class="book-position-volume">
+            {{position.volume.toFixed(5)}}
+         </div>
+         <div class="book-position-total">
+               {{position.totalVolume.toFixed(5)}}
+         </div>
+      </div>
+   </perfect-scrollbar>
+</div>
+</div>

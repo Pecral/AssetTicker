@@ -1,0 +1,31 @@
+@import 'themes.scss';
+
+.asset-overview-wrapper {
+   display:flex;
+   flex-direction: row;
+   flex-wrap: wrap;
+}
+
+.asset-overview {
+
+   padding: 5px;
+
+   border: 1px solid $border-color;
+
+   @media screen and (min-width: 1500px) {
+      flex-basis: 20%;   
+   }
+
+   @media screen and (min-width: 1000px) and (max-width: 1500px) {
+      flex-basis: 25%;   
+   }
+
+   @media screen and (min-width: 768px) and (max-width: 1000px) {
+      flex-basis: calc(100%/3);   
+   }
+
+   @media screen and (max-width: 768px) {
+      flex-basis: 100%;   
+   }
+   
+}

@@ -1,0 +1,36 @@
+@import 'themes.scss';
+
+text {
+   fill: $dark-foreground-color;
+}
+
+path.candle {
+   stroke: #000000;
+}
+
+path.candle.body {
+   stroke-width: 0;
+}
+
+path.candle.up {
+   fill: #00AA00;
+   stroke: #00AA00;
+}
+
+path.candle.down {
+   fill: #FF0000;
+   stroke: #FF0000;
+}
+
+rect.pane {
+   cursor: move;
+   fill: none;
+   pointer-events: all;
+}
+
+
+.svg-wrapper {
+   height: 100%;
+   width: 100%;
+   overflow:hidden;
+}

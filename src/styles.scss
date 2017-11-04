@@ -1,0 +1,43 @@
+@import 'themes.scss';
+@import 'animations.scss';
+
+/* You can add global styles to this file, and also import other style files */
+body {
+   font-size: 12px;
+   background-color: $dark-background-color;
+   color: $dark-foreground-color;
+   overflow: hidden;
+}
+
+.border-l {
+   border-left:2px solid $border-color;
+}
+
+.border-t {
+   border-top:2px solid $border-color;
+}
+
+.border-r {
+   border-right:2px solid $border-color;
+}
+
+.border-b {
+   border-bottom:2px solid $border-color;
+}
+
+/* Fix for bigger dropdown-element than input element */
+.ui-autocomplete-dropdown, .ui-autocomplete-input {
+   height: 35px !important;
+}
+
+.dark-dropdown {
+   .ui-dropdown-item {
+      // background-color: $dark-background-color;
+      color: black;
+   }
+
+   .ui-dropdown-label {
+      background-color: $dark-background-color;
+      color: black;
+   }
+}
