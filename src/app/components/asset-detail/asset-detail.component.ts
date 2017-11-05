@@ -1,5 +1,5 @@
 import { Subscription } from 'rxjs/Subscription';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ExchangeTicker } from '../../shared/services/exchange-ticker';
 import { ExchangeTickerType } from '../../shared/models/exchange-ticker-type';
@@ -11,7 +11,8 @@ import { AssetTrade } from '../../shared/models/asset-trade';
    templateUrl: './asset-detail.component.html',
    styleUrls: ['./asset-detail.component.scss']
 })
-export class AssetDetailComponent implements OnInit {
+export class AssetDetailComponent implements OnInit, OnDestroy {
+
 
    /** search key for symbol pair search */
    symbolPairSearchKey: string;
@@ -64,6 +65,10 @@ export class AssetDetailComponent implements OnInit {
       });
    }
 
+   ngOnDestroy(): void {
+      this.unsubscribe();
+   }   
+
    /** Converts a single word to pascal case */
    convertWordToPascalCase(text:string):string {
       return text.charAt(0).toUpperCase() + text.slice(1);
@@ -87,6 +92,10 @@ export class AssetDetailComponent implements OnInit {
       });
    }
 
+   switchSymbolPair(pair: string) {
+      this.router.navigate([`${ExchangeTickerType[this.currentExchange.exchangeType]}/${pair}/${this.currentTimeframe}`]);
+   }
+
    /** Load trades, orderbooks and candle sticks of specific symbol pair */
    loadSymbolPair(pair: string): void {
       //if the pair is not available or we're already subscribed to it, we'll do nothing
@@ -97,10 +106,7 @@ export class AssetDetailComponent implements OnInit {
       }
 
       //unsubsribe from old pair
-      if (this.tradeSubscription) {
-         this.tradeSubscription.unsubscribe();
-         this.currentExchange.unsubscribeFromAssetTrades(this.currentSymbolPair);
-      }
+      this.unsubscribe();
 
       this.currentSymbolPair = pair.toUpperCase();
       this.symbolPairSearchKey = this.currentSymbolPair; //refresh search key for proper upper-case
@@ -134,4 +140,17 @@ export class AssetDetailComponent implements OnInit {
          }
       }     
    }   
+
+   navigateToHome() {
+      this.router.navigate(['/']);
+   }
+
+   /** unsubscribe from current trading pair */
+   unsubscribe() {
+      if (this.tradeSubscription) {
+         this.tradeSubscription.unsubscribe();
+         this.currentExchange.unsubscribeFromAssetTrades(this.currentSymbolPair);
+         this.currentExchange.unsubscribeFromOrderBook(this.currentSymbolPair);
+      }      
+   }
 }

@@ -2,13 +2,14 @@ import { D3Service, D3, Axis, DSVParsedArray } from 'd3-ng2-service';
 import { CandleStick } from './../../shared/models/candle-stick';
 import { Subscription } from 'rxjs/Subscription';
 import { ExchangeTickerHandlerService } from './../../shared/services/exchange-ticker-handler.service';
-import { Component, OnInit, Input, ElementRef, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, Input, ElementRef, ViewEncapsulation, OnDestroy } from '@angular/core';
 import { ExchangeTickerType } from '../../shared/models/exchange-ticker-type';
 import { ExchangeTicker } from '../../shared/services/exchange-ticker';
 import { Selection, BaseType, ArrayLike, ValueFn } from 'd3-selection';
 
 import * as d3 from 'd3';
 import * as techan from 'techan';
+import { Router } from '@angular/router';
 
 
 @Component({
@@ -17,12 +18,56 @@ import * as techan from 'techan';
    styleUrls: ['./techan-live.component.scss'],
    encapsulation: ViewEncapsulation.None
 })
-export class TechanLiveComponent implements OnInit {
+export class TechanLiveComponent implements OnInit, OnDestroy {
+
+
+   private _symbolPair: string;
+   @Input()
+   set symbolPair(value: string) {
+      if (this.currentExchange && this._symbolPair && value != this._symbolPair) {
+         this.unsubscribe();
+      }
+
+      this._symbolPair = value;
+      this.subscribeToCandles();
+   }
+   get symbolPair(): string {
+      return this._symbolPair;
+   }
+
+   private _exchangeTickerType: ExchangeTickerType;
+   @Input()
+   set exchangeTickerType(value: ExchangeTickerType) {
+      if (this.currentExchange && this._symbolPair && value != this._exchangeTickerType) {
+         this.unsubscribe();
+      }
+
+      this._exchangeTickerType = value;
+      this.subscribeToCandles();
+   }
+   get exchangeTickerType(): ExchangeTickerType {
+      return this._exchangeTickerType;
+   }
+
+   private _timeframe: string;
+   @Input()
+   set timeframe(value: string) {
+      if(this.currentExchange && this._symbolPair && value != this._timeframe) {
+         this.unsubscribe();
+      }
+
+      this._timeframe = value;
+      this.subscribeToCandles();
+   }
+   get timeframe(): string {
+      return this._timeframe;
+   }
+
+   //#region D3/Techan settings
    private d3: D3; // <-- Define the private member which will hold the d3 reference
    private parentNativeElement: any;
    private svg: any; //probably Selection<SVGSVGElement, any, null, undefined>;  
 
-   /** D3/Techan settings */
    dim = {
       width: null, height: null,
       margin: { top: 20, right: 70, bottom: 150, left: 70 },
@@ -74,47 +119,7 @@ export class TechanLiveComponent implements OnInit {
 
    candleLimit: number = 200; //limit number of candles that should be displayed
 
-   private _symbolPair: string;
-   @Input()
-   set symbolPair(value: string) {
-      if (this.currentExchange && this._symbolPair && value != this._symbolPair) {
-         this.unsubscribe();
-      }
-
-      this._symbolPair = value;
-      this.subscribeToCandles();
-   }
-   get symbolPair(): string {
-      return this._symbolPair;
-   }
-
-   private _exchangeTickerType: ExchangeTickerType;
-   @Input()
-   set exchangeTickerType(value: ExchangeTickerType) {
-      if (this.currentExchange && this._symbolPair && value != this._exchangeTickerType) {
-         this.unsubscribe();
-      }
-
-      this._exchangeTickerType = value;
-      this.subscribeToCandles();
-   }
-   get exchangeTickerType(): ExchangeTickerType {
-      return this._exchangeTickerType;
-   }
-
-   private _timeframe: string = '15m';
-   @Input()
-   set timeframe(value: string) {
-      if(this.currentExchange && this._symbolPair && value != this._timeframe) {
-         this.unsubscribe();
-      }
-
-      this._timeframe = value;
-      this.subscribeToCandles();
-   }
-   get timeframe(): string {
-      return this._timeframe;
-   }
+   //#endregion   
 
    currentExchange: ExchangeTicker;
 
@@ -137,10 +142,14 @@ export class TechanLiveComponent implements OnInit {
    candlesSnapshotSubscription: Subscription;
    candles: CandleStick[] = [];
 
-   constructor(private exchangeHandler: ExchangeTickerHandlerService, private element: ElementRef, private d3Service: D3Service) {
+   constructor(private exchangeHandler: ExchangeTickerHandlerService, private element: ElementRef, private d3Service: D3Service, private router: Router) {
       this.d3 = this.d3Service.getD3(); // <-- obtain the d3 object from the D3 Service
       this.parentNativeElement = this.element.nativeElement;
    }
+
+   ngOnDestroy(): void {
+      this.unsubscribe();
+   }   
 
    unsubscribe() {
       if(this.candleSubscription && this.candlesSnapshotSubscription) {
@@ -152,7 +161,7 @@ export class TechanLiveComponent implements OnInit {
 
    /** Load order book with the currently saved configuration */
    subscribeToCandles(): void {
-      if (this._symbolPair && this._exchangeTickerType !== undefined) {
+      if (this._symbolPair && this._exchangeTickerType !== undefined && this._timeframe) {
          this.currentExchange = this.exchangeHandler.getExchangeTicker(this._exchangeTickerType);
          this.candles = [];
 
@@ -187,6 +196,7 @@ export class TechanLiveComponent implements OnInit {
 
    /** Switch the candle stick's time frame */
    switchTimeframe(newTimeframe: any) {
+      this.router.navigate([`${ExchangeTickerType[this.currentExchange.exchangeType]}/${this._symbolPair}/${newTimeframe}`]);
       this.timeframe = newTimeframe;
    }
 
@@ -523,5 +533,6 @@ export class TechanLiveComponent implements OnInit {
       let legendText = d3.select("#bigChart svg text.symbol")["_groups"][0][0];
       legendText.innerHTML = `Close: ${candle.close} Volume: ${candle.volume.toFixed(3)}`;
    }
+  
 
 }

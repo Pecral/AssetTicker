@@ -111,7 +111,7 @@ export class AssetOverviewComponent implements OnInit {
    }
 
    navigateToExchangeAssetPair(exchangeAssetPair: ExchangeAssetPair):void {
-      this.router.navigate([`${exchangeAssetPair.exchange}/${exchangeAssetPair.pair.symbol}/15m`])
+      this.router.navigate([`${exchangeAssetPair.exchange}/${exchangeAssetPair.pair.symbol}/15m`]);
    }
 
 }

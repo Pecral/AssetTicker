@@ -1,6 +1,8 @@
 <div class="exchange-config border-b">
+  <span class="home-button" (click)="navigateToHome()">Asset-Ticker</span>
+
   <p-autoComplete [(ngModel)]="symbolPairSearchKey" [suggestions]="filteredSymbolPairs" (completeMethod)="filterSymbolPairs(symbolPairSearchKey)"
-    [size]="10" [minLength]="0" placeholder="Symbol pair.." [dropdown]="true" (onSelect)="loadSymbolPair(symbolPairSearchKey)"
+    [size]="10" [minLength]="0" placeholder="Symbol pair.." [dropdown]="true" (onSelect)="switchSymbolPair(symbolPairSearchKey)"
     (onKeyUp)="symbolPairSearchKeyReleased($event)">
   </p-autoComplete>
 </div>
