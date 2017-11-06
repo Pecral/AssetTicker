@@ -109,9 +109,4 @@ export class AssetOverviewComponent implements OnInit {
          return priorityPair;
       }
    }
-
-   navigateToExchangeAssetPair(exchangeAssetPair: ExchangeAssetPair):void {
-      this.router.navigate([`${exchangeAssetPair.exchange}/${exchangeAssetPair.pair.symbol}/15m`]);
-   }
-
 }

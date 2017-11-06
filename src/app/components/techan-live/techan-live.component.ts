@@ -533,6 +533,4 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
       let legendText = d3.select("#bigChart svg text.symbol")["_groups"][0][0];
       legendText.innerHTML = `Close: ${candle.close} Volume: ${candle.volume.toFixed(3)}`;
    }
-  
-
 }

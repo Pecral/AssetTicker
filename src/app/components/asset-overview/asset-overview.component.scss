@@ -14,6 +14,8 @@
 .asset-overview {
    padding: 5px 5px 0px 5px;
    border: 1px solid $border-color;
+	-webkit-animation: swing-in-top-fwd 1s cubic-bezier(0.175, 0.885, 0.320, 1.275) both;
+   animation: swing-in-top-fwd 1s cubic-bezier(0.175, 0.885, 0.320, 1.275) both;
 
    @media screen and (min-width: 1500px) {
       flex-basis: 20%;   
@@ -33,7 +35,7 @@
 
    .primary-traded-pair {
       .header {
-         font-size: 1.3rem;
+         font-size: 1.2rem;
          display:flex;
          flex-direction: row;
          padding-bottom: 15px;
@@ -47,7 +49,7 @@
    }
 
    .primary-asset, .secondary-asset, .pair-price {
-      padding-right: 7px;
+      margin-right: 7px;
    }
 
    .secondary-asset {
@@ -68,8 +70,13 @@
       border-bottom: 1px solid $border-color;
    }
 
-   .exchange-asset-pairs exchange-asset-pair:last-child {
+   .exchange-asset-pairs .exchange-pair-wrapper:last-child exchange-asset-pair {
       border-bottom: none;
+   }
+
+   a, a:hover {
+      color: $dark-foreground-color;
+      text-decoration: none;
    }
 
 }

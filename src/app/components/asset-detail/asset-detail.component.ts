@@ -139,10 +139,6 @@ export class AssetDetailComponent implements OnInit, OnDestroy {
             this.filteredSymbolPairs.push(availablePair);
          }
       }     
-   }   
-
-   navigateToHome() {
-      this.router.navigate(['/']);
    }
 
    /** unsubscribe from current trading pair */
