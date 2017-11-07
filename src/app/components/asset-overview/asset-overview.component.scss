@@ -6,11 +6,6 @@
    flex-wrap: wrap;
 }
 
-.mark-hover:hover {
-   background-color: #26323a;
-   cursor: pointer;
-}
-
 .asset-overview {
    padding: 5px 5px 0px 5px;
    border: 1px solid $border-color;
@@ -33,44 +28,16 @@
       flex-basis: 100%;   
    }
 
-   .primary-traded-pair {
-      .header {
-         font-size: 1.2rem;
-         display:flex;
-         flex-direction: row;
-         padding-bottom: 15px;
-         padding-left:3px;
-         padding-right:3px;
-
-         .percent-change {
-            margin-left:auto;
-         }
-      }
-   }
-
-   .primary-asset, .secondary-asset, .pair-price {
-      margin-right: 7px;
-   }
-
-   .secondary-asset {
-      color: darken($dark-foreground-color, 25%);
-   }
-
-   .percent-change {
-      &.up {
-         color: $light-green;
-      }
-
-      &.down {
-         color: $light-red;
-      }
-   }
-
-   exchange-asset-pair {
+   .exchange-pair-wrapper {
       border-bottom: 1px solid $border-color;
    }
 
-   .exchange-asset-pairs .exchange-pair-wrapper:last-child exchange-asset-pair {
+   .exchange-pair-wrapper:hover {
+      background-color: #26323a;
+      cursor: pointer;
+   }
+
+   .exchange-asset-pairs a:last-child .exchange-pair-wrapper {
       border-bottom: none;
    }
 

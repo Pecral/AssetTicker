@@ -1,3 +1,4 @@
+import { D3Service, D3 } from 'd3-ng2-service';
 import { TickerMessage } from './../../shared/models/ticker-message';
 import { ExchangeTickerType } from './../../shared/models/exchange-ticker-type';
 import { AssetPair } from './../../shared/models/asset-pair';
@@ -29,8 +30,11 @@ export class AssetOverviewComponent implements OnInit {
 
    private exchangeServices: ExchangeTicker[] = [];
 
-   constructor(private _exchangeHandler: ExchangeTickerHandlerService, private router: Router) {
+   /** D3 instance to draw svg-graphics */
+   private d3: D3;
 
+   constructor(private _exchangeHandler: ExchangeTickerHandlerService, private router: Router, private d3Service: D3Service) {
+      this.d3 = this.d3Service.getD3(); // <-- obtain the d3 object from the D3 Service
    }
 
    ngOnInit() {
@@ -70,8 +74,6 @@ export class AssetOverviewComponent implements OnInit {
       }
    }
 
-
-
    /** Returns the primarily traded asset pair for this asset (USD or EUR based)
     */
    getPrimaryAssetPair(asset: Asset): ExchangeAssetPair {
@@ -97,11 +99,13 @@ export class AssetOverviewComponent implements OnInit {
       });;
 
       let priorityPair = prioritizedAssets[0];
-      //safe only if every asset pair already has received a ticker message
+      //save only if every asset pair already has received a ticker message
       if(this.exchangeAssetPairs.every(x => x.latestTicker !== undefined && x.latestTicker !== null)) {
          this.primaryAssetPairs.set(asset.shortcode, prioritizedAssets[0]);
       }
       
       return prioritizedAssets[0];
    }
+
+
 }

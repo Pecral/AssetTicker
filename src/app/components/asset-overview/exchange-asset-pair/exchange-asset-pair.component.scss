@@ -1,9 +1,28 @@
+@import 'themes.scss';
+
 :host() {
+
+}
+
+.simple-body {
    display:flex;
    flex-direction: row;
    justify-content: space-between;
    font-size: 13px;
    padding: 3px;
+}
+
+.header {
+   font-size: 1.2rem;
+   display:flex;
+   flex-direction: row;
+   padding-bottom: 15px;
+   padding-left:3px;
+   padding-right:3px;
+
+   .percent-change {
+      margin-left:auto;
+   }
 }
 
 .exchange {
@@ -26,7 +45,22 @@
    flex-basis: 20%;
 }
 
+.primary-asset, .secondary-asset, .pair-price {
+   margin-right: 7px;
+}
+
+.secondary-asset {
+   color: darken($dark-foreground-color, 25%);
+}
+
 .percent-change {
    flex-basis: 20%;
-   text-align: right;
+   text-align: right;    
+   &.up {
+      color: $light-green;
+   }
+
+   &.down {
+      color: $light-red;
+   }
 }

@@ -1,7 +1,18 @@
-<span class="exchange">{{exchangeAssetPair.exchange}}</span>
-<span class="asset-price-wrapper">
+<div *ngIf="drawHeader" class="header">
+  <span class="primary-asset">{{exchangeAssetPair.pair.primaryAsset.shortcode}}</span>
   <span class="secondary-asset">{{exchangeAssetPair.pair.secondaryAsset.shortcode}}</span>
-  <span class="pair-price" [@priceChangeAnimation]="priceChangeState">{{exchangeAssetPair.latestTicker?.lastPrice | currencyValueFormatter: exchangeAssetPair.pair.secondaryAsset.shortcode}}</span>
-</span>
-<span class="volume">{{exchangeAssetPair.latestTicker?.volume.toFixed(0) | currencyValueFormatter}}</span>
-<span class="percent-change {{exchangeAssetPair.latestTicker?.dailyChangePercent >= 0 ? 'up' : 'down'}}">{{exchangeAssetPair.latestTicker?.dailyChangePercent >= 0 ? '+' : ''}}{{exchangeAssetPair.latestTicker?.dailyChangePercent.toFixed(2)}}%</span>
+  <span class="pair-price">{{exchangeAssetPair.latestTicker?.lastPrice | currencyValueFormatter: exchangeAssetPair.pair.secondaryAsset.shortcode}}</span>
+  <span class="percent-change {{exchangeAssetPair.latestTicker?.dailyChangePercent >= 0 ? 'up' : 'down'}}">{{exchangeAssetPair.latestTicker?.dailyChangePercent.toFixed(2)}}%</span>
+</div>
+<div class="candle-chart-wrapper">
+
+</div>
+<div class="simple-body">
+  <span class="exchange">{{exchangeAssetPair.exchange}}</span>
+  <span class="asset-price-wrapper">
+    <span class="secondary-asset">{{exchangeAssetPair.pair.secondaryAsset.shortcode}}</span>
+    <span class="pair-price" [@priceChangeAnimation]="priceChangeState">{{exchangeAssetPair.latestTicker?.lastPrice | currencyValueFormatter: exchangeAssetPair.pair.secondaryAsset.shortcode}}</span>
+  </span>
+  <span class="volume">{{exchangeAssetPair.latestTicker?.volume.toFixed(0) | currencyValueFormatter}}</span>
+  <span class="percent-change {{exchangeAssetPair.latestTicker?.dailyChangePercent >= 0 ? 'up' : 'down'}}">{{exchangeAssetPair.latestTicker?.dailyChangePercent >= 0 ? '+' : ''}}{{exchangeAssetPair.latestTicker?.dailyChangePercent.toFixed(2)}}%</span>
+</div>
