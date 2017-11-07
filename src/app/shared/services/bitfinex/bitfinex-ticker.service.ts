@@ -359,7 +359,7 @@ export class BitfinexTickerService implements ExchangeTicker, OnDestroy {
       //    return result.json();
       // });
 
-      let symbolPairs = ["BTCUSD", "ETHUSD", "ETHBTC", "XMRUSD", "XMRBTC", "LTCUSD", "LTCBTC", "ETCBTC", "ETCUSD", "RRTUSD", "RRTBTC", "ZECUSD", "ZECBTC", "DSHUSD", "DSHBTC", "BCCBTC", "BCUBTC", "BCCUSD", "BCUUSD", "XRPUSD", "XRPBTC", "IOTUSD", "IOTBTC", "IOTETH", "EOSUSD", "EOSBTC", "EOSETH", "SANUSD", "SANBTC", "SANETH", "OMGUSD", "OMGBTC", "OMGETH", "BCHUSD", "BCHBTC", "BCHETH", "NEOUSD", "NEOBTC", "NEOETH", "ETPUSD", "ETPBTC", "ETPETH", "QTMUSD", "QTMBTC", "QTMETH", "BT1USD", "BT2USD", "BT1BTC", "BT2BTC", "AVTUSD", "AVTBTC", "AVTETH", "EDOUSD", "EDOBTC", "EDOETH", "BG1USD", "BG2USD", "BG1BTC", "BG2BTC", "BTGUSD", "BTGBTC"];
+      let symbolPairs = ["BTCUSD", "ETHUSD", "ETHBTC", "XMRUSD", "XMRBTC", "LTCUSD", "LTCBTC", "ETCBTC", "ETCUSD", "RRTUSD", "RRTBTC", "ZECUSD", "ZECBTC", "DSHUSD", "DSHBTC", "BCCBTC", "BCUBTC", "BCCUSD", "BCUUSD", "XRPUSD", "XRPBTC", "IOTUSD", "IOTBTC", "IOTETH", "EOSUSD", "EOSBTC", "EOSETH", "SANUSD", "SANBTC", "SANETH", "OMGUSD", "OMGBTC", "OMGETH", "BCHUSD", "BCHBTC", "BCHETH", "NEOUSD", "NEOBTC", "NEOETH", "ETPUSD", "ETPBTC", "ETPETH", "QTMUSD", "QTMBTC", "QTMETH", "BT1USD", "BT2USD", "BT1BTC", "BT2BTC", "AVTUSD", "AVTBTC", "AVTETH", "EDOUSD", "EDOBTC", "EDOETH", "BTGUSD", "BTGBTC"]; //not working "BG1USD", "BG2USD", "BG1BTC", "BG2BTC"
 
       let assetPairs: AssetPair[] = symbolPairs.map(asset => {
          let pair = new AssetPair();

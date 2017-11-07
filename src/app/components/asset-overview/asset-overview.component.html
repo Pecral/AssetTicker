@@ -1,22 +1,22 @@
 <div class="asset-overview-wrapper">
   <div class="asset-overview" *ngFor="let asset of availableAssets">
-    <a [routerLink]="getPrimaryAssetPair(asset).exchange + '/' + getPrimaryAssetPair(asset).pair.symbol + '/15m'" class="primary-traded-pair mark-hover exchange-pair-wrapper"
-      (click)="navigateToExchangeAssetPair(getPrimaryAssetPair(asset))">
-      <div class="header">
-        <span class="primary-asset">{{asset.shortcode}}</span>
-        <span class="secondary-asset">{{getPrimaryAssetPair(asset).pair.secondaryAsset.shortcode}}</span>
-        <span class="pair-price">{{getPrimaryAssetPair(asset).latestTicker?.lastPrice | currencyValueFormatter: getPrimaryAssetPair(asset).pair.secondaryAsset.shortcode}}</span>
-        <span class="percent-change {{getPrimaryAssetPair(asset).latestTicker?.dailyChangePercent >= 0 ? 'up' : 'down'}}">{{getPrimaryAssetPair(asset).latestTicker?.dailyChangePercent.toFixed(2)}}%</span>
-      </div>
-      <div class="candle-chart-wrapper">
+    <a [routerLink]="getPrimaryAssetPair(asset).exchange + '/' + getPrimaryAssetPair(asset).pair.symbol + '/15m'">
+      <div class="primary-traded-pair mark-hover exchange-pair-wrapper">
+        <div class="header">
+          <span class="primary-asset">{{asset.shortcode}}</span>
+          <span class="secondary-asset">{{getPrimaryAssetPair(asset).pair.secondaryAsset.shortcode}}</span>
+          <span class="pair-price">{{getPrimaryAssetPair(asset).latestTicker?.lastPrice | currencyValueFormatter: getPrimaryAssetPair(asset).pair.secondaryAsset.shortcode}}</span>
+          <span class="percent-change {{getPrimaryAssetPair(asset).latestTicker?.dailyChangePercent >= 0 ? 'up' : 'down'}}">{{getPrimaryAssetPair(asset).latestTicker?.dailyChangePercent.toFixed(2)}}%</span>
+        </div>
+        <div class="candle-chart-wrapper">
 
+        </div>
+        <exchange-asset-pair class="primary" [exchangeAssetPair]="getPrimaryAssetPair(asset)">
+        </exchange-asset-pair>
       </div>
-      <exchange-asset-pair class="primary" [exchangeAssetPair]="getPrimaryAssetPair(asset)">
-      </exchange-asset-pair>
     </a>
     <div class="exchange-asset-pairs">
-      <a [routerLink]="'/' + tradedPair.exchange + '/' + tradedPair.pair.symbol + '/15m'" class="exchange-pair-wrapper" (click)="navigateToExchangeAssetPair(tradedPair)"
-        *ngFor="let tradedPair of getExchangeAssetPairs(asset, true)">
+      <a [routerLink]="tradedPair.exchange + '/' + tradedPair.pair.symbol + '/15m'" class="exchange-pair-wrapper" *ngFor="let tradedPair of getExchangeAssetPairs(asset, true)">
         <exchange-asset-pair class="mark-hover" [exchangeAssetPair]="tradedPair">
         </exchange-asset-pair>
       </a>

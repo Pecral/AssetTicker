@@ -22,7 +22,10 @@ export class AssetOverviewComponent implements OnInit {
 
    exchangeAssetPairs: ExchangeAssetPair[] = [];
 
-   private primaryAssetPairs = new Map<Asset, ExchangeAssetPair>();
+   /** Primarily traded asset pairs for a asset
+    * Key: Asset's shortcode e.g. BTC
+    */
+   private primaryAssetPairs = new Map<string, ExchangeAssetPair>();
 
    private exchangeServices: ExchangeTicker[] = [];
 
@@ -41,19 +44,13 @@ export class AssetOverviewComponent implements OnInit {
          exchange.websocketIsConnected.filter(isConnected => isConnected).subscribe(isConnected => {
             exchange.getAvailableAssetPairs().subscribe(pairs => {
                for (let pair of pairs) {
-                  // if(pair.symbol.startsWith("LTC")) {
-                     let exchangeAssetPair = new ExchangeAssetPair();
-                     exchangeAssetPair.exchange = ExchangeTickerType[exchange.exchangeType];
-                     exchangeAssetPair.pair = pair;
-   
-                     //subscribe for ticker
-                     exchange.subscribeToTickerMessages(pair.symbol).subscribe(tickerMessage => exchangeAssetPair.latestTicker = tickerMessage);
-   
-                     this.exchangeAssetPairs.push(exchangeAssetPair);
-                  // }
+                  let exchangeAssetPair = new ExchangeAssetPair();
+                  exchangeAssetPair.exchange = ExchangeTickerType[exchange.exchangeType];
+                  exchangeAssetPair.pair = pair;
+
+                  this.exchangeAssetPairs.push(exchangeAssetPair);
                }
 
-               // this.availableAssets = this.availableAssets.concat(pairs.filter(x => x.primaryAsset.shortcode.toUpperCase() == 'LTC').map(x => x.primaryAsset));
                this.availableAssets = this.availableAssets.concat(pairs.map(x => x.primaryAsset));
                //distinct
                this.availableAssets = this.availableAssets.filter((asset, index) => this.availableAssets.findIndex(as => as.shortcode == asset.shortcode) == index);
@@ -73,40 +70,38 @@ export class AssetOverviewComponent implements OnInit {
       }
    }
 
+
+
    /** Returns the primarily traded asset pair for this asset (USD or EUR based)
     */
    getPrimaryAssetPair(asset: Asset): ExchangeAssetPair {
-      if (this.primaryAssetPairs.has(asset)) {
-         this.primaryAssetPairs.get(asset);
+      if (this.primaryAssetPairs.has(asset.shortcode)) {
+         this.primaryAssetPairs.get(asset.shortcode);
       }
 
       //filter for usd-based pairs --TODO: Priority by settings
       let importantFiat = ['USD', 'EUR'];
 
-      let fiatPriority = this.exchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode && importantFiat.indexOf(x.pair.secondaryAsset.shortcode.toUpperCase()) != -1);
-      let volumePriority = fiatPriority.sort((assetA, assetB) => (assetA.latestTicker == null ? 0 : assetA.latestTicker.volume) - (assetB.latestTicker == null ? 0 : assetB.latestTicker.volume));
+      let prioritizedAssets = this.exchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode).sort((assetA, assetB) => {
+         let aIsFiat = importantFiat.indexOf(assetA.pair.secondaryAsset.shortcode.toUpperCase()) != -1 ? 1 : -1;
+         let bIsFiat = importantFiat.indexOf(assetB.pair.secondaryAsset.shortcode.toUpperCase()) != -1 ? 1 : -1;
 
-      if (volumePriority.length > 0) {
-         let priorityPair = volumePriority[0];
-         //safe only if volume is already received
-         if(priorityPair.latestTicker) {
-            this.primaryAssetPairs.set(asset, volumePriority[0]);
+         //if only one of them is fiat, it is prioritized
+         if(aIsFiat != bIsFiat) {
+            return bIsFiat - aIsFiat;
          }
-         
-         return volumePriority[0];
-      }
-      else {
-         //if it's not availe for the important fiat-currencies, we'll order by volume only
-         volumePriority = this.exchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode).sort((assetA, assetB) => (assetA.latestTicker == null ? 0 : assetA.latestTicker.volume) - (assetB.latestTicker == null ? 0 : assetB.latestTicker.volume));
-
-         let priorityPair = volumePriority[0];
-
-         //safe only if volume is already received
-         if(priorityPair.latestTicker) {
-            this.primaryAssetPairs.set(asset, volumePriority[0]);
+         //otherwise prioritize by volume
+         else {
+            return (assetA.latestTicker == null ? 0 : assetA.latestTicker.volume) - (assetB.latestTicker == null ? 0 : assetB.latestTicker.volume);
          }
+      });;
 
-         return priorityPair;
+      let priorityPair = prioritizedAssets[0];
+      //safe only if every asset pair already has received a ticker message
+      if(this.exchangeAssetPairs.every(x => x.latestTicker !== undefined && x.latestTicker !== null)) {
+         this.primaryAssetPairs.set(asset.shortcode, prioritizedAssets[0]);
       }
+      
+      return prioritizedAssets[0];
    }
 }

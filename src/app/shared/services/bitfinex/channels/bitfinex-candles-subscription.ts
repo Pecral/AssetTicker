@@ -27,6 +27,7 @@ export class BitfinexCandlesSubscription extends BitfinexChannelSubscription {
          }
 
          this.candlestickSnapshotReceived.next(true);
+         this.candlestickSnapshotReceived.complete();
       }
       else {
          this.handleSingleCandleStick(message[1]);
