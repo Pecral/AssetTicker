@@ -26,15 +26,11 @@ export class AssetOverviewComponent implements OnInit {
    /** Primarily traded asset pairs for a asset
     * Key: Asset's shortcode e.g. BTC
     */
-   private primaryAssetPairs = new Map<string, ExchangeAssetPair>();
+   primaryAssetPairs = new Map<string, ExchangeAssetPair>();
 
    private exchangeServices: ExchangeTicker[] = [];
 
-   /** D3 instance to draw svg-graphics */
-   private d3: D3;
-
-   constructor(private _exchangeHandler: ExchangeTickerHandlerService, private router: Router, private d3Service: D3Service) {
-      this.d3 = this.d3Service.getD3(); // <-- obtain the d3 object from the D3 Service
+   constructor(private _exchangeHandler: ExchangeTickerHandlerService, private router: Router) {
    }
 
    ngOnInit() {
@@ -48,13 +44,16 @@ export class AssetOverviewComponent implements OnInit {
          exchange.websocketIsConnected.filter(isConnected => isConnected).subscribe(isConnected => {
             exchange.getAvailableAssetPairs().subscribe(pairs => {
                for (let pair of pairs) {
-                  let exchangeAssetPair = new ExchangeAssetPair();
-                  exchangeAssetPair.exchange = ExchangeTickerType[exchange.exchangeType];
-                  exchangeAssetPair.pair = pair;
+                  //if(pair.symbol.startsWith("BTCUSD")) {
+                     let exchangeAssetPair = new ExchangeAssetPair();
+                     exchangeAssetPair.exchange = ExchangeTickerType[exchange.exchangeType];
+                     exchangeAssetPair.pair = pair;
 
-                  this.exchangeAssetPairs.push(exchangeAssetPair);
+                     this.exchangeAssetPairs.push(exchangeAssetPair);
+                  //}
                }
 
+               // this.availableAssets = this.availableAssets.concat(pairs.filter(x => x.primaryAsset.shortcode.toUpperCase() == 'BTC').map(x => x.primaryAsset));
                this.availableAssets = this.availableAssets.concat(pairs.map(x => x.primaryAsset));
                //distinct
                this.availableAssets = this.availableAssets.filter((asset, index) => this.availableAssets.findIndex(as => as.shortcode == asset.shortcode) == index);

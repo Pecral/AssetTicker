@@ -4,14 +4,6 @@
 
 }
 
-.simple-body {
-   display:flex;
-   flex-direction: row;
-   justify-content: space-between;
-   font-size: 13px;
-   padding: 3px;
-}
-
 .header {
    font-size: 1.2rem;
    display:flex;
@@ -25,42 +17,91 @@
    }
 }
 
-.exchange {
-   flex-basis: 25%;
-}
+.simple-body {
+   display:flex;
+   flex-direction: row;
+   justify-content: space-between;
+   font-size: 13px;
+   padding: 3px;
 
-.asset-price-wrapper {
-   flex-basis: 35%;
-   display: flex;
-   overflow:hidden;
+   .exchange {
+      flex-basis: 25%;
+   }   
 
-   .pair-price {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+   .asset-price-wrapper {
+      flex-basis: 35%;
+      display: flex;
+      overflow:hidden;
+   
+      .pair-price {
+         overflow: hidden;
+         text-overflow: ellipsis;
+         white-space: nowrap;
+      }   
    }   
 }
 
-.volume {
-   flex-basis: 20%;
-}
-
-.primary-asset, .secondary-asset, .pair-price {
-   margin-right: 7px;
-}
-
-.secondary-asset {
-   color: darken($dark-foreground-color, 25%);
-}
-
-.percent-change {
-   flex-basis: 20%;
-   text-align: right;    
-   &.up {
-      color: $light-green;
+.header, .simple-body {
+   .volume {
+      flex-basis: 20%;
+   }
+   
+   .primary-asset, .secondary-asset, .pair-price {
+      margin-right: 7px;
+   }
+   
+   .secondary-asset {
+      color: darken($dark-foreground-color, 25%);
    }
 
-   &.down {
-      color: $light-red;
+   .percent-change {
+      flex-basis: 20%;
+      text-align: right;    
+      &.up {
+         color: $light-green;
+      }
+   
+      &.down {
+         color: $light-red;
+      }
+   }   
+}
+
+.candle-chart-wrapper {
+   max-height:120px;
+   height: 120px;
+
+   svg {
+      //center svg in div
+      display: block;
+      margin: auto;      
    }
+
+   path {
+      fill: none;
+      stroke-width: 1;
+   }
+   
+   path.candle {
+      stroke: #000000;
+   }
+   
+   path.candle.body {
+      stroke-width: 0;
+   }
+   
+   path.candle {
+      fill: #777777;
+      stroke: #777777;
+   }
+   
+   path.candle.up {
+      fill: #00AA00;
+      stroke: #00AA00;
+   }
+   
+   path.candle.down {
+      fill: #FF0000;
+      stroke: #FF0000;
+   }   
 }

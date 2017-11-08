@@ -2,7 +2,7 @@
   <div id="asset-{{asset.shortcode}}" class="asset-overview" *ngFor="let asset of availableAssets">
     <a [routerLink]="getPrimaryAssetPair(asset).exchange + '/' + getPrimaryAssetPair(asset).pair.symbol + '/15m'">
       <div class="primary-traded-pair exchange-pair-wrapper">
-        <exchange-asset-pair class="primary" [exchangeAssetPair]="getPrimaryAssetPair(asset)" [drawHeader]="true"> </exchange-asset-pair>
+        <exchange-asset-pair class="primary" [exchangeAssetPair]="getPrimaryAssetPair(asset)" [drawHeader]="true" [enableChart]="true" [triggerChartInitialization]="this.primaryAssetPairs.has(asset.shortcode)"> </exchange-asset-pair>
       </div>
     </a>
     <div class="exchange-asset-pairs">

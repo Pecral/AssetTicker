@@ -9,8 +9,6 @@
 .asset-overview {
    padding: 5px 5px 0px 5px;
    border: 1px solid $border-color;
-	-webkit-animation: swing-in-top-fwd 1s cubic-bezier(0.175, 0.885, 0.320, 1.275) both;
-   animation: swing-in-top-fwd 1s cubic-bezier(0.175, 0.885, 0.320, 1.275) both;
 
    @media screen and (min-width: 1500px) {
       flex-basis: 20%;   

@@ -2,7 +2,7 @@ import { D3Service, D3, Axis, DSVParsedArray } from 'd3-ng2-service';
 import { CandleStick } from './../../shared/models/candle-stick';
 import { Subscription } from 'rxjs/Subscription';
 import { ExchangeTickerHandlerService } from './../../shared/services/exchange-ticker-handler.service';
-import { Component, OnInit, Input, ElementRef, ViewEncapsulation, OnDestroy } from '@angular/core';
+import { Component, OnInit, Input, ElementRef, ViewEncapsulation, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
 import { ExchangeTickerType } from '../../shared/models/exchange-ticker-type';
 import { ExchangeTicker } from '../../shared/services/exchange-ticker';
 import { Selection, BaseType, ArrayLike, ValueFn } from 'd3-selection';
@@ -18,17 +18,13 @@ import { Router } from '@angular/router';
    styleUrls: ['./techan-live.component.scss'],
    encapsulation: ViewEncapsulation.None
 })
-export class TechanLiveComponent implements OnInit, OnDestroy {
-
+export class TechanLiveComponent implements OnInit, OnDestroy, OnChanges {
 
    private _symbolPair: string;
    @Input()
    set symbolPair(value: string) {
-      if (this.currentExchange && this._symbolPair && value != this._symbolPair) {
-         this.unsubscribe();
-      }
-
       this._symbolPair = value;
+      console.log('set symbolPair');
       this.subscribeToCandles();
    }
    get symbolPair(): string {
@@ -38,10 +34,6 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
    private _exchangeTickerType: ExchangeTickerType;
    @Input()
    set exchangeTickerType(value: ExchangeTickerType) {
-      if (this.currentExchange && this._symbolPair && value != this._exchangeTickerType) {
-         this.unsubscribe();
-      }
-
       this._exchangeTickerType = value;
       this.subscribeToCandles();
    }
@@ -52,10 +44,6 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
    private _timeframe: string;
    @Input()
    set timeframe(value: string) {
-      if(this.currentExchange && this._symbolPair && value != this._timeframe) {
-         this.unsubscribe();
-      }
-
       this._timeframe = value;
       this.subscribeToCandles();
    }
@@ -121,7 +109,9 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
 
    //#endregion   
 
-   currentExchange: ExchangeTicker;
+   private currentExchange: ExchangeTicker;
+   private subscribedSettings = { exchange: null, symbol: null, timeframe: null };
+   private chartIsInitialized: boolean = false;
 
    timeframes = [
       { value: '1m', label: 'one minute' },
@@ -138,9 +128,9 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
       { value: '1M', label: 'one month' }
    ]
 
-   candleSubscription: Subscription;
-   candlesSnapshotSubscription: Subscription;
-   candles: CandleStick[] = [];
+   private candleSubscription: Subscription;
+   private candlesSnapshotSubscription: Subscription;
+   private candles: CandleStick[] = [];
 
    constructor(private exchangeHandler: ExchangeTickerHandlerService, private element: ElementRef, private d3Service: D3Service, private router: Router) {
       this.d3 = this.d3Service.getD3(); // <-- obtain the d3 object from the D3 Service
@@ -149,10 +139,13 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
 
    ngOnDestroy(): void {
       this.unsubscribe();
-   }   
+   }
+
+   ngOnChanges(changes: SimpleChanges): void {
+   }
 
    unsubscribe() {
-      if(this.candleSubscription && this.candlesSnapshotSubscription) {
+      if (this.candleSubscription && this.candlesSnapshotSubscription) {
          this.candleSubscription.unsubscribe();
          this.candlesSnapshotSubscription.unsubscribe();
          this.currentExchange.unsubscribeFromCandles(this._symbolPair, this._timeframe);
@@ -161,7 +154,17 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
 
    /** Load order book with the currently saved configuration */
    subscribeToCandles(): void {
-      if (this._symbolPair && this._exchangeTickerType !== undefined && this._timeframe) {
+      //if the current input values are either null or equals to the currently subscribed settings, don't do anything
+      if (this._symbolPair && this._exchangeTickerType !== undefined && this._timeframe &&
+         !(this.subscribedSettings.symbol == this._symbolPair && this.subscribedSettings.exchange == this._exchangeTickerType && this.subscribedSettings.timeframe == this._timeframe)) {
+
+         this.unsubscribe();
+
+         //save new settings
+         this.subscribedSettings.symbol = this._symbolPair;
+         this.subscribedSettings.exchange = this._exchangeTickerType;
+         this.subscribedSettings.timeframe = this._timeframe;
+
          this.currentExchange = this.exchangeHandler.getExchangeTicker(this._exchangeTickerType);
          this.candles = [];
 
@@ -173,7 +176,9 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
                   this.candles = this.currentExchange.getCandlesSnapshot(this._symbolPair, this.timeframe).slice();
 
                   //load candles
-                  this.loadCandleSticks();
+                  if(this.chartIsInitialized) {
+                     this.loadCandleSticks();                     
+                  }
 
                   //subscribe for new candles
                   this.candleSubscription = this.currentExchange.subscribeToCandles(this._symbolPair, this.timeframe).filter(candle => candle !== null).subscribe(candle => {
@@ -186,7 +191,10 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
                      else {
                         this.candles.push(candle);
                      }
-                     this.loadCandleSticks();
+
+                     if(this.chartIsInitialized) {
+                        this.loadCandleSticks();
+                     }
                   });
                });
             }
@@ -234,11 +242,11 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
       this.volumeAnnotation = techan.plot.axisannotation().orient('right').axis(this.volumeAxis).width(35);
 
       this.ohlcCrosshair = techan.plot.crosshair()
-                                      .xScale(this.x)
-                                      .yScale(this.y)
-                                      .xAnnotation([this.timeAnnotation, this.timeAnnotationTop])
-                                      .yAnnotation([this.ohlcAnnotation, this.percentAnnotation, this.volumeAnnotation])
-                                      .on('move', this.ohlcCrosshairMove.bind(this));
+         .xScale(this.x)
+         .yScale(this.y)
+         .xAnnotation([this.timeAnnotation, this.timeAnnotationTop])
+         .yAnnotation([this.ohlcAnnotation, this.percentAnnotation, this.volumeAnnotation])
+         .on('move', this.ohlcCrosshairMove.bind(this));
       this.macdScale = d3.scaleLinear();
       this.rsiScale = d3.scaleLinear();
       this.macd = techan.plot.macd().xScale(this.x).yScale(this.macdScale);
@@ -251,7 +259,7 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
       this.rsiAnnotation = techan.plot.axisannotation().orient('right').axis(this.rsiAxis).format(d3.format(',.2s'));
       this.rsiAxisLeft = d3.axisLeft(this.rsiScale).ticks(3);
       this.rsiAnnotationLeft = techan.plot.axisannotation().orient('left').axis(this.rsiAxisLeft).format(d3.format(',.2s'));
-      
+
       this.macdCrosshair = techan.plot.crosshair().xScale(this.x).yScale(this.macdScale).xAnnotation([this.timeAnnotation, this.timeAnnotationTop]).yAnnotation([this.macdAnnotation, this.macdAnnotationLeft]);
       this.rsiCrosshair = techan.plot.crosshair().xScale(this.x).yScale(this.rsiScale).xAnnotation([this.timeAnnotation, this.timeAnnotationTop]).yAnnotation([this.rsiAnnotation, this.rsiAnnotationLeft]);
 
@@ -273,11 +281,6 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
          .attr("class", "indicatorClip")
          .append("rect")
          .attr("x", 0);
-
-      svg.append('text')
-         .attr("class", "version")
-         .style("text-anchor", "end")
-         .text("TechanJS v" + techan.version + ", D3 v" + d3.version);
 
       svg = svg.append("g")
          .attr("class", "chart")
@@ -376,6 +379,12 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
             selection.call(resizeFunction).call(drawFunction);
          }, interval);
       });
+
+      if(this.candles.length > 0) {
+         this.loadCandleSticks();
+      }
+
+      this.chartIsInitialized = true;
    }
 
    resize(selection) {
@@ -386,7 +395,7 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
 
       this.dim.plot.width = this.dim.width - this.dim.margin.left - this.dim.margin.right;
       this.dim.plot.height = this.dim.height - this.dim.margin.top - this.dim.margin.bottom;
-      this.dim.ohlc.height = this.dim.plot.height * (1-0.01111111111);//0.67777777;
+      this.dim.ohlc.height = this.dim.plot.height * (1 - 0.01111111111);//0.67777777;
       this.dim.indicator.height = this.dim.plot.height * 0.144444;
       this.dim.indicator.padding = this.dim.plot.height * 0.01111111111;
       this.dim.indicator.top = this.dim.ohlc.height + this.dim.indicator.padding;
@@ -423,10 +432,6 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
          .attr("width", this.dim.width)
          .attr("height", this.dim.height);
 
-      selection.select("text.version")
-         .attr("x", this.dim.width - 5)
-         .attr("y", this.dim.height);
-
       selection.selectAll("defs #ohlcClip > rect")
          .attr("width", this.dim.plot.width)
          .attr("height", this.dim.ohlc.height);
@@ -459,7 +464,7 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
       this.x.domain(techan.scale.plot.time(this.candles).domain());
       this.y.domain(techan.scale.plot.ohlc(postRollData).domain());
       if (this.candles.length > 0) {
-         this.updateLegendWithCandleInformation(this.candles[this.candles.length -1]);
+         this.updateLegendWithCandleInformation(this.candles[this.candles.length - 1]);
          this.yPercent.domain(techan.scale.plot.percent(this.y, accessor(this.candles[indicatorPreRoll])).domain());
       }
 
@@ -483,7 +488,7 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
       svg.select("g.ema.ma-2").datum(techan.indicator.ema().period(50)(this.candles)).call(this.ema2);
 
       svg.select("g.crosshair.ohlc").call(this.ohlcCrosshair);
-      
+
       // svg.select("g.macd .indicator-plot").datum(this.macdData).call(this.macd);
       // svg.select("g.rsi .indicator-plot").datum(this.rsiData).call(this.rsi);
 
@@ -524,7 +529,7 @@ export class TechanLiveComponent implements OnInit, OnDestroy {
 
    ohlcCrosshairMove(coords) {
       let candle = this.candles.find(x => x.date.getTime() == coords.x.getTime());
-      if(candle) {
+      if (candle) {
          this.updateLegendWithCandleInformation(candle);
       }
    }
