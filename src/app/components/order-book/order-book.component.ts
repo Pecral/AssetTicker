@@ -38,6 +38,7 @@ export class OrderBookComponent implements OnInit {
    reversedRows:boolean;
 
    orderBook: OrderBook;
+   isLoaded: boolean;
 
    constructor(private exchangeHandler: ExchangeTickerHandlerService) { }
 
@@ -53,6 +54,7 @@ export class OrderBookComponent implements OnInit {
          currentExchange.websocketIsConnected.subscribe(isConnected => {
             if(isConnected) {
                this.orderBook = currentExchange.getOrderBook(this._symbolPair);
+               this.isLoaded = true;
             }
          });
       }

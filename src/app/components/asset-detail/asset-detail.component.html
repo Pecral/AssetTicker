@@ -21,7 +21,7 @@
       <div class="order-book-side-wrapper">
         <order-book [symbolPair]="currentSymbolPair" [exchangeTickerType]="currentExchange.exchangeType" [bookSide]="'asks'" [reversedRows]="true"></order-book>
       </div>
-      <span *ngIf="lastTrade" class="price-separator">{{lastTrade.price}}
+      <span *ngIf="lastTrade" class="price-separator">{{lastTrade.price | currencyValueFormatter}}
         <span>{{this.lastTrade.secondaryAsset.shortcode}}</span>
       </span>
       <div class="order-book-side-wrapper">

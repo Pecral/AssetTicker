@@ -4,19 +4,17 @@
     <div class="volume-header">Volume</div>
     <div class="total-header">Total</div>
   </div>
-  <div>
-   <perfect-scrollbar class="order-book-positions">
-      <div *ngFor="let position of getBookSide()" class="order-book-position">
-         <div class="book-position-price">
-            {{position.price.toFixed(3)}}
-         </div>
-         <div class="book-position-volume">
-            {{position.volume.toFixed(5)}}
-         </div>
-         <div class="book-position-total">
-               {{position.totalVolume.toFixed(5)}}
-         </div>
+  <div class="order-book-positions fade-in">
+    <div *ngFor="let position of getBookSide()" class="order-book-position">
+      <div class="book-position-price">
+        {{position.price.toFixed(3)}}
       </div>
-   </perfect-scrollbar>
-</div>
+      <div class="book-position-volume">
+        {{position.volume.toFixed(5)}}
+      </div>
+      <div class="book-position-total">
+        {{position.totalVolume.toFixed(5)}}
+      </div>
+    </div>
+  </div>
 </div>

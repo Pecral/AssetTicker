@@ -1,83 +1,75 @@
 @import 'themes.scss';
-
-
-
 .wrapper {
-   display:flex;
+   display: flex;
    flex-direction: column;
-   overflow:hidden;
+   overflow: hidden;
    height: 100%;
+   color: $white-blue;
 
    .trades-overview-header {
       font-weight: bold;
       flex: 0 0 25px;
       padding-top: 5px;
-      
       span {
-         display:table-cell;
-         padding-left:8px;
+         display: table-cell;
+         padding-left: 8px;
       }
-
-      .trade-column-time { 
+      .trade-column-time {
          width: 66px;
       }
       .trade-column-price {
          width: 79px;
       }
-
       .trade-column-value {
-         padding-right:0.3rem;
-      }      
-   }
-   
-   .trades-wrapper {
-      ::ng-deep .ps__scrollbar-y {
-         background-color: rgba(64, 64, 64, 0.94);
+         padding-right: 0.3rem;
       }
-      
+
+   }
+   .trades-wrapper {
+       ::ng-deep .ps__scrollbar-y {
+         background-color: rgba(204, 204, 204, 0.94);
+      }
       table th {
          border: none;
-       }
-      
-       table td {
+      }
+      table td {
          border-color: $dark-background-color;
+      }
+      tr.trade-row:nth-child(odd) {
+         background-color: #14222d !important;
+      }
 
-       }
-      
-       table tbody {
-         color: black;
-       }
-      
-       .trade-row {
-         border-color: black;
+      .trade-row {
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;         
+         border-color: $dark-background-color;
          -webkit-animation: slide-in-fwd-center 0.7s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
          animation: slide-in-fwd-center 0.7s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
-      
-         &.trade-buy {
-           background-color: $light-green;
+         &.trade-buy .trade-column-price {
+            color: $light-green;
          }
-      
-         &.trade-sell {
-           background-color: $light-red;
+         &.trade-sell .trade-column-price {
+            color: $light-red;
          }
-      
-       }  
+      }
    }
-   
-   .trade-column-time { 
+
+   .trade-column-time {
       width: 65px;
    }
+
    .trade-column-price {
       width: 75px;
    }
-   .trade-column-amount { 
+
+   .trade-column-amount {
       width: 80px;
       text-align: right;
    }
+
    .trade-column-value {
       width: 100px;
       text-align: right;
    }
-      
 }
-

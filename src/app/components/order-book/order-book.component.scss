@@ -14,6 +14,15 @@
 //    }
 // }
 
+.order-book-side.reversed-rows {
+   position:relative;
+
+   .order-book-positions {
+      position: absolute;
+      bottom: 0;      
+   }
+}
+
 .order-book-side {
    display:flex;
    flex-direction: column;
@@ -25,7 +34,7 @@
       display:flex;
       flex-direction: column;
       flex: 0 0 auto;
-      overflow:hidden;
+      //overflow:hidden;
    }
 
    &.reversed-rows .order-book-positions, &.reversed-rows ::ng-deep .order-book-positions .ps-content  {
@@ -38,6 +47,9 @@
       padding-top: 5px;
       display:flex;
       flex-direction: row;
+      background-color: $dark-background-color;
+      z-index: 2;
+      border-bottom:1px solid $border-color;
 
       div {
          text-align: right;

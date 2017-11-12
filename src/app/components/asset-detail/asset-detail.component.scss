@@ -35,14 +35,18 @@
    flex: 0 0 250px;
    overflow: hidden;
    justify-content: center;
+   color: $white-blue;
+
    .order-book-depth {
       flex: 0 1 00px;
    }
+
    .order-book-positions {
       flex: 0 0 auto;
       display: flex;
       flex-direction: column;
       height: calc(100vh - 48px);
+
       .order-book-header {
          margin-bottom: 0;
          .book-position-price {
@@ -52,6 +56,7 @@
             width: 100px;
          }
       }
+
       .price-separator {
          height: 35px;
          font-size: 1.3rem;
