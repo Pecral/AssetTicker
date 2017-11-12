@@ -40,8 +40,6 @@ export class AppComponent implements OnInit {
       this.currentExchange = this._exchangeHandler.getExchangeTicker(ExchangeTickerType.Bitfinex);
       this.currentExchange.getAvailableAssetPairs().subscribe(result => {
          this.availableSymbolPairs = result.map(x => x.symbol);
-         //load btcusd as standard pair
-         this.loadSymbolPair('BTCUSD');
       });
    }
 

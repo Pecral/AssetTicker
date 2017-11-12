@@ -1,8 +1,5 @@
 @import 'themes.scss';
-
-:host() {
-
-}
+@import 'animations.scss';
 
 .header {
    font-size: 1.2rem;
@@ -75,6 +72,8 @@
       //center svg in div
       display: block;
       margin: auto;      
+      -webkit-animation: fade-in 1.2s linear;
+      animation: fade-in 1.2s ease-in-out;
    }
 
    path {

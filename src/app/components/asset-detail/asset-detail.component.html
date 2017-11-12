@@ -11,9 +11,7 @@
   <trade-overview class="trades-wrapper border-r" [symbolPair]="currentSymbolPair" [exchangeTickerType]="currentExchange.exchangeType"></trade-overview>
 
   <div class="chart-wrapper">
-    <!-- <chart [symbolPair]="currentSymbolPair" [exchangeTickerType]="currentExchange.exchangeType"></chart> -->
-    <!-- <techan-chart></techan-chart> -->
-    <techan-live [symbolPair]="currentSymbolPair" [exchangeTickerType]="currentExchange.exchangeType" [timeframe]="currentTimeframe"></techan-live>
+    <candle-chart [symbolPair]="currentSymbolPair" [exchangeTickerType]="currentExchange.exchangeType" [timeframe]="currentTimeframe"></candle-chart>
   </div>
 
   <div class="order-book-wrapper">

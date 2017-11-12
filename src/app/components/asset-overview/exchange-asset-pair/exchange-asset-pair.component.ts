@@ -9,6 +9,7 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
 import { ChangeDetectorRef } from '@angular/core';
 import { D3, D3Service, ScaleTime, ScaleLinear } from 'd3-ng2-service';
 
+import * as d3 from 'd3';
 import * as techan from 'techan';
 
 @Component({
@@ -54,8 +55,6 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
 
    /** The candles subscription is saved globally so that we can unsubscribe from it once this component gets destroyed */
    private candlesSubscription: Subscription;
-   /** D3 instance to draw svg-graphics */
-   private d3: D3;
 
    private readonly chartTimeframe: string = '15m';
 
@@ -84,8 +83,7 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    //#endregion D3-Properties
    private chartIsInitialized: boolean = false;
 
-   constructor(private changeDetectorRef: ChangeDetectorRef, private exchangeHandler: ExchangeTickerHandlerService, private d3Service: D3Service) {
-      this.d3 = this.d3Service.getD3(); // <-- obtain the d3 object from the D3 Service
+   constructor(private changeDetectorRef: ChangeDetectorRef, private exchangeHandler: ExchangeTickerHandlerService) {
    }
 
    ngOnInit() {
@@ -186,7 +184,7 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       this.candles = this.candles.slice(this.candles.length - 96);    
       
       if(this.chartIsInitialized) {
-         this.drawChart(this.d3.select(`#overview-chart-${this.exchangeAssetPair.pair.symbol}`));
+         this.drawChart(d3.select(`#overview-chart-${this.exchangeAssetPair.pair.symbol}`));
       }
    }
 
@@ -202,10 +200,10 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
 
    private initializeCandlesChart(): void {
       this.x = techan.scale.financetime();
-      this.y = this.d3.scaleLinear();
+      this.y = d3.scaleLinear();
       this.candlestick = techan.plot.candlestick().xScale(this.x).yScale(this.y);
 
-      let selection = this.d3.select(`#overview-chart-${this.exchangeAssetPair.pair.symbol}`);
+      let selection = d3.select(`#overview-chart-${this.exchangeAssetPair.pair.symbol}`);
 
       let svg = selection.append('svg');
 

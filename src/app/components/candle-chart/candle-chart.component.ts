@@ -8,17 +8,18 @@ import { ExchangeTicker } from '../../shared/services/exchange-ticker';
 import { Selection, BaseType, ArrayLike, ValueFn } from 'd3-selection';
 
 import * as d3 from 'd3';
+import {event as currentEvent} from 'd3-selection';
 import * as techan from 'techan';
 import { Router } from '@angular/router';
 
 
 @Component({
-   selector: 'techan-live',
-   templateUrl: './techan-live.component.html',
-   styleUrls: ['./techan-live.component.scss'],
+   selector: 'candle-chart',
+   templateUrl: './candle-chart.component.html',
+   styleUrls: ['./candle-chart.component.scss'],
    encapsulation: ViewEncapsulation.None
 })
-export class TechanLiveComponent implements OnInit, OnDestroy, OnChanges {
+export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
    private _symbolPair: string;
    @Input()
@@ -64,48 +65,52 @@ export class TechanLiveComponent implements OnInit, OnDestroy, OnChanges {
       indicator: { height: null, padding: null, top: null, bottom: null }
    };
 
-   x: any;
-   y: any;
-   yPercent: any;
-   indicatorTop: any;
-   yVolume: any;
-   candlestick: any;
-   sma0: any;
-   sma1: any;
-   ema2: any;
-   volume: any;
-   xAxis: any;
-   xAxisTop: any;
-   timeAnnotation: any;
-   timeAnnotationTop: any;
-   yAxis: any;
-   ohlcAnnotation: any;
-   closeAnnotation: any;
-   percentAxis: any;
-   percentAnnotation: any;
-   volumeAxis: any;
-   volumeAnnotation: any;
-   ohlcCrosshair: any;
+   private x: any;
+   private y: any;
+   private yPercent: any;
+   
+   private zoom: any;
+   private currentZoom: any;
+   private zoomableInit: any;
+   private yInit: any;
+   private yPercentInit: any;
 
-   macdScale: any;
-   rsiScale: any;
-   macd: any;
-   macdAxis: any;
-   macdAnnotation: any;
-   macdAxisLeft: any;
-   macdAnnotationLeft: any;
-   rsi: any;
-   rsiAxis: any;
-   rsiAnnotation: any;
-   rsiAxisLeft: any;
-   rsiAnnotationLeft: any;
-   macdCrosshair: any;
-   rsiCrosshair: any;
+   private indicatorTop: any;
+   private candlestick: any;
+   private sma0: any;
+   private sma1: any;
+   private ema2: any;
+   private volume: any;
+   private xAxis: any;
+   private xAxisTop: any;
+   private timeAnnotation: any;
+   private timeAnnotationTop: any;
+   private yAxis: any;
+   private ohlcAnnotation: any;
+   private closeAnnotation: any;
+   private percentAxis: any;
+   private percentAnnotation: any;
+   private ohlcCrosshair: any;
+
+   private volumeScale: any;
+   private volumeAxisRight: any;
+   private volumeAnnotationRight: any;
+   private volumAxisLeft: any;
+   private volumeAnnotationLeft: any;
+   private volumeCrosshair: any;
+   private rsi: any;
+   private rsiAxis: any;
+   private rsiAnnotation: any;
+   private rsiAxisLeft: any;
+   private rsiAnnotationLeft: any;
+   private rsiScale: any;
+   private rsiCrosshair: any;
+
    //data properties
-   macdData: any;
-   rsiData: any;
+   //private macdData: any;
+   private rsiData: any;
 
-   candleLimit: number = 200; //limit number of candles that should be displayed
+   candleLimit: number = 20000; //limit number of candles that should be displayed
 
    //#endregion   
 
@@ -167,6 +172,7 @@ export class TechanLiveComponent implements OnInit, OnDestroy, OnChanges {
 
          this.currentExchange = this.exchangeHandler.getExchangeTicker(this._exchangeTickerType);
          this.candles = [];
+         this.currentZoom = null;
 
          this.currentExchange.websocketIsConnected.subscribe(isConnected => {
             if (isConnected) {
@@ -211,24 +217,21 @@ export class TechanLiveComponent implements OnInit, OnDestroy, OnChanges {
    loadCandleSticks() {
       this.candles = this.candles.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-      this.draw(d3.select("#bigChart"));
-      // Associate the zoom with the scale after a domain has been applied
-      // Stash initial settings to store as baseline for zooming
-      //this.zoomableInit = this.x.zoomable().clamp(false).copy();
+      this.draw();
    }
 
    ngOnInit(): void {
-
       this.x = techan.scale.financetime();
       this.y = d3.scaleLinear();
+      this.zoom = d3.zoom()
+         .scaleExtent([0.5, 5])
+         .on("zoom", this.zoomed.bind(this));  
       this.yPercent = this.y.copy();
       this.indicatorTop = d3.scaleLinear();
-      this.yVolume = d3.scaleLinear();
       this.candlestick = techan.plot.candlestick().xScale(this.x).yScale(this.y);
       this.sma0 = techan.plot.sma().xScale(this.x).yScale(this.y);
       this.sma1 = techan.plot.sma().xScale(this.x).yScale(this.y);
       this.ema2 = techan.plot.ema().xScale(this.x).yScale(this.y);
-      this.volume = techan.plot.volume().accessor(this.candlestick.accessor()).xScale(this.x).yScale(this.yVolume);
       this.xAxis = d3.axisBottom(this.x);
       this.xAxisTop = d3.axisTop(this.x);
       this.timeAnnotation = techan.plot.axisannotation().orient('bottom').axis(this.xAxis).format(d3.timeFormat('%Y-%m-%d %H:%M')).width(95);
@@ -238,35 +241,36 @@ export class TechanLiveComponent implements OnInit, OnDestroy, OnChanges {
       this.closeAnnotation = techan.plot.axisannotation().orient('right').accessor(this.candlestick.accessor()).axis(this.yAxis).format(d3.format(',.2f'));
       this.percentAxis = d3.axisLeft(this.yPercent).tickFormat(d3.format('+.1%'));
       this.percentAnnotation = techan.plot.axisannotation().orient('left').axis(this.percentAxis);
-      this.volumeAxis = d3.axisRight(this.yVolume).ticks(3).tickFormat(d3.format(',.3s'));
-      this.volumeAnnotation = techan.plot.axisannotation().orient('right').axis(this.volumeAxis).width(35);
 
       this.ohlcCrosshair = techan.plot.crosshair()
-         .xScale(this.x)
-         .yScale(this.y)
+         .xScale(this.timeAnnotation.axis().scale())
+         .yScale(this.ohlcAnnotation.axis().scale())
          .xAnnotation([this.timeAnnotation, this.timeAnnotationTop])
-         .yAnnotation([this.ohlcAnnotation, this.percentAnnotation, this.volumeAnnotation])
+         .yAnnotation([this.ohlcAnnotation, this.percentAnnotation])
          .on('move', this.ohlcCrosshairMove.bind(this));
-      this.macdScale = d3.scaleLinear();
+
+      this.volumeScale = d3.scaleLinear();
+      this.volume = techan.plot.volume().accessor(this.candlestick.accessor()).xScale(this.x).yScale(this.volumeScale);
+      this.volumeAxisRight = d3.axisRight(this.volumeScale).ticks(3).tickFormat(d3.format(',.3s'));
+      this.volumeAnnotationRight = techan.plot.axisannotation().orient('right').axis(this.volumeAxisRight).format(d3.format(',.2s'));
+      this.volumAxisLeft = d3.axisLeft(this.volumeScale).ticks(3).tickFormat(d3.format(',.3s'));
+      this.volumeAnnotationLeft = techan.plot.axisannotation().orient('left').axis(this.volumAxisLeft).format(d3.format(',.2s'));
+      this.volumeCrosshair = techan.plot.crosshair().xScale(this.x).yScale(this.volumeScale).xAnnotation([this.timeAnnotation, this.timeAnnotationTop]).yAnnotation([this.volumeAnnotationRight, this.volumeAnnotationLeft]).on('move', this.ohlcCrosshairMove.bind(this));
+
       this.rsiScale = d3.scaleLinear();
-      this.macd = techan.plot.macd().xScale(this.x).yScale(this.macdScale);
-      this.macdAxis = d3.axisRight(this.macdScale).ticks(3);
-      this.macdAnnotation = techan.plot.axisannotation().orient('right').axis(this.macdAxis).format(d3.format(',.2s'));
-      this.macdAxisLeft = d3.axisLeft(this.macdScale).ticks(3);
-      this.macdAnnotationLeft = techan.plot.axisannotation().orient('left').axis(this.macdAxisLeft).format(d3.format(',.2s'));
       this.rsi = techan.plot.rsi().xScale(this.x).yScale(this.rsiScale);
       this.rsiAxis = d3.axisRight(this.rsiScale).ticks(3);
       this.rsiAnnotation = techan.plot.axisannotation().orient('right').axis(this.rsiAxis).format(d3.format(',.2s'));
       this.rsiAxisLeft = d3.axisLeft(this.rsiScale).ticks(3);
       this.rsiAnnotationLeft = techan.plot.axisannotation().orient('left').axis(this.rsiAxisLeft).format(d3.format(',.2s'));
-
-      this.macdCrosshair = techan.plot.crosshair().xScale(this.x).yScale(this.macdScale).xAnnotation([this.timeAnnotation, this.timeAnnotationTop]).yAnnotation([this.macdAnnotation, this.macdAnnotationLeft]);
       this.rsiCrosshair = techan.plot.crosshair().xScale(this.x).yScale(this.rsiScale).xAnnotation([this.timeAnnotation, this.timeAnnotationTop]).yAnnotation([this.rsiAnnotation, this.rsiAnnotationLeft]);
 
       let selection = d3.select("#bigChart");
 
       var svg = selection.append("svg"),
          defs = svg.append("defs");
+
+      this.svg = svg;
 
       defs.append("clipPath")
          .attr("id", "ohlcClip")
@@ -303,14 +307,18 @@ export class TechanLiveComponent implements OnInit, OnDestroy, OnChanges {
          .attr("transform", "translate(0,0)");
 
       ohlcSelection.append("g")
-         .attr("class", "y axis");
+         .attr("class", "y axis")
+         .attr("transform", "translate(" + this.x(1) + ",0)")
+         //legend for y-axis
+         .append("text")
+         .attr("transform", "rotate(-90)")
+         .attr("y", -12)
+         .attr("dy", ".71em")
+         .style("text-anchor", "end")
+         .text("Price ($)");         
 
       ohlcSelection.append("g")
          .attr("class", "closeValue annotation up");
-
-      ohlcSelection.append("g")
-         .attr("class", "volume")
-         .attr("clip-path", "url(#ohlcClip)");
 
       ohlcSelection.append("g")
          .attr("class", "candlestick")
@@ -331,35 +339,28 @@ export class TechanLiveComponent implements OnInit, OnDestroy, OnChanges {
       ohlcSelection.append("g")
          .attr("class", "percent axis");
 
-      ohlcSelection.append("g")
-         .attr("class", "volume axis");
+      let volumeSelection = svg.append("g")
+         .attr("class", "volume")
 
-      var indicatorSelection = svg.selectAll("svg > g.indicator").data(["macd", "rsi"]).enter()
-         .append("g")
-         .attr("class", function (d) { return d + " indicator"; });
+      volumeSelection.append("g")
+         .attr("class", "volume-plot")
+         .attr("clip-path", "url(#indicatorClip-0)");
 
-      indicatorSelection.append("g")
+      volumeSelection.append("g")
          .attr("class", "axis right");
 
-      indicatorSelection.append("g")
+      volumeSelection.append("g")
          .attr("class", "axis left");
-
-      indicatorSelection.append("g")
-         .attr("class", "indicator-plot")
-         .attr("clip-path", function (d, i) { return "url(#indicatorClip-" + i + ")"; });
 
       // Add trendlines and other interactions last to be above zoom pane
       svg.append('g')
          .attr("class", "crosshair ohlc");
 
-      // svg.append('g')
-      //    .attr("class", "crosshair macd");
+      svg.append('g')
+         .attr("class", "crosshair volume");
 
-      // svg.append('g')
-      //    .attr("class", "crosshair rsi");
-
-      this.updateValues(selection);
-      selection.call(this.draw.bind(this));
+      this.updateValues();
+      selection.call(this.draw.bind(this));  
 
       let resizeTimer;
       let interval = Math.floor(1000 / 60 * 10);
@@ -387,144 +388,169 @@ export class TechanLiveComponent implements OnInit, OnDestroy, OnChanges {
       this.chartIsInitialized = true;
    }
 
-   resize(selection) {
-      this.dim.width = selection.node().clientWidth;
-      this.dim.height = selection.node().clientHeight;
+   resize() {
+      let selection = d3.select('#bigChart');
+      let dim = this.dim;
+
+      dim.width = selection.node().clientWidth;
+      dim.height = selection.node().clientHeight;
 
       let svgWrapper = document.querySelector('.svg-wrapper');
 
-      this.dim.plot.width = this.dim.width - this.dim.margin.left - this.dim.margin.right;
-      this.dim.plot.height = this.dim.height - this.dim.margin.top - this.dim.margin.bottom;
-      this.dim.ohlc.height = this.dim.plot.height * (1 - 0.01111111111);//0.67777777;
-      this.dim.indicator.height = this.dim.plot.height * 0.144444;
-      this.dim.indicator.padding = this.dim.plot.height * 0.01111111111;
-      this.dim.indicator.top = this.dim.ohlc.height + this.dim.indicator.padding;
-      this.dim.indicator.bottom = this.dim.indicator.top + this.dim.indicator.height + this.dim.indicator.padding;
+      dim.plot.width = dim.width - dim.margin.left - dim.margin.right;
+      dim.plot.height = dim.height - dim.margin.top - dim.margin.bottom;
+      dim.ohlc.height = dim.plot.height * 0.833333333;
+      dim.indicator.height = dim.plot.height * 0.144444;
+      dim.indicator.padding = dim.plot.height * 0.01111111111;
+      dim.indicator.top = dim.ohlc.height + dim.indicator.padding;
+      dim.indicator.bottom = dim.indicator.top + dim.indicator.height + dim.indicator.padding;
 
-      var xRange = [0, this.dim.plot.width],
-         yRange = [this.dim.ohlc.height, 0],
-         ohlcVerticalTicks = Math.min(10, Math.round(this.dim.height / 70)),
-         xTicks = Math.min(10, Math.round(this.dim.width / 130));
+      var xRange = [0, dim.plot.width],
+         yRange = [dim.ohlc.height, 0],
+         ohlcVerticalTicks = Math.min(10, Math.round(dim.height / 70)),
+         xTicks = Math.min(10, Math.round(dim.width / 130));
 
-      this.indicatorTop.range([this.dim.indicator.top, this.dim.indicator.bottom]);
+      this.indicatorTop.range([dim.indicator.top, dim.indicator.bottom]);
       this.x.range(xRange);
       this.xAxis.ticks(xTicks);
-      this.xAxisTop.ticks(xTicks);
       this.y.range(yRange);
       this.yAxis.ticks(ohlcVerticalTicks);
       this.yPercent.range(this.y.range());
       this.percentAxis.ticks(ohlcVerticalTicks);
-      this.yVolume.range([yRange[0], yRange[0] - 0.2 * yRange[0]]);
-      this.volumeAxis.ticks(Math.min(3, Math.round(this.dim.height / 150)));
-      this.timeAnnotation.translate([0, this.dim.plot.height]);
+
+      this.timeAnnotation.translate([0, dim.plot.height]);
       this.ohlcAnnotation.translate([xRange[1], 0]);
       this.closeAnnotation.translate([xRange[1], 0]);
+      this.ohlcCrosshair.verticalWireRange([0, dim.plot.height]);
 
-      // this.macdScale.range([this.indicatorTop(0) + this.dim.indicator.height, this.indicatorTop(0)]);
-      // this.rsiScale.range([this.indicatorTop(1) + this.dim.indicator.height, this.indicatorTop(1)]);
-      // this.macdAnnotation.translate([xRange[1], 0]);
-      // this.rsiAnnotation.translate([xRange[1], 0]);
-      // this.ohlcCrosshair.verticalWireRange([0, this.dim.plot.height]);
-      // this.macdCrosshair.verticalWireRange([0, this.dim.plot.height]);
-      // this.rsiCrosshair.verticalWireRange([0, this.dim.plot.height]);
+      let indicatorTop = this.indicatorTop;
+
+      this.volumeScale.range([indicatorTop(0) + dim.indicator.height, indicatorTop(0)]);
+      this.rsiScale.range([indicatorTop(1) + dim.indicator.height, indicatorTop(1)]);
+      this.volumeAnnotationRight.translate([xRange[1], 0]);
+      this.rsiAnnotation.translate([xRange[1], 0]);
+      this.volumeCrosshair.verticalWireRange([0, dim.plot.height]);
+      this.rsiCrosshair.verticalWireRange([0, dim.plot.height]);
 
       selection.select("svg")
-         .attr("width", this.dim.width)
-         .attr("height", this.dim.height);
+         .attr("width", dim.width)
+         .attr("height", dim.height);
 
       selection.selectAll("defs #ohlcClip > rect")
-         .attr("width", this.dim.plot.width)
-         .attr("height", this.dim.ohlc.height);
+         .attr("width", dim.plot.width)
+         .attr("height", dim.ohlc.height);
 
-      // selection.selectAll("defs .indicatorClip > rect")
-      //    .attr("y", function (d, i) {
-      //       return this.indicatorTop(i);
-      //    })
-      //    .attr("width", this.dim.plot.width)
-      //    .attr("height", this.dim.indicator.height);
+      selection.selectAll("defs .indicatorClip > rect")
+         .attr("y", (d, i) => { return indicatorTop(i); })
+         .attr("width", dim.plot.width)
+         .attr("height", dim.indicator.height);
 
       selection.select("g.x.axis.bottom")
-         .attr("transform", "translate(0," + this.dim.plot.height + ")");
+         .attr("transform", "translate(0," + dim.plot.height + ")");
 
       selection.select("g.ohlc g.y.axis")
          .attr("transform", "translate(" + xRange[1] + ",0)");
 
-      selection.selectAll("g.indicator g.axis.right")
+      selection.select("g.volume g.axis.right")
          .attr("transform", "translate(" + xRange[1] + ",0)");
-      selection.selectAll("g.indicator g.axis.left")
+
+      selection.select("g.volume g.axis.left")
          .attr("transform", "translate(" + xRange[0] + ",0)");
    }
 
-   updateValues(selection): void {
-      var svg = selection.select("svg");
+   updateValues(): void {
+      var svg = this.svg;
       var accessor = this.candlestick.accessor(),
          indicatorPreRoll = this.candles.length > this.candleLimit ? this.candles.length - this.candleLimit : 0,
-         postRollData = this.candles.slice(indicatorPreRoll);  // Don't show where indicators don't have data
+         data = this.candles.slice(indicatorPreRoll);  // Don't show where indicators don't have data
+
 
       this.x.domain(techan.scale.plot.time(this.candles).domain());
-      this.y.domain(techan.scale.plot.ohlc(postRollData).domain());
+      this.y.domain(techan.scale.plot.ohlc(data).domain());
       if (this.candles.length > 0) {
          this.updateLegendWithCandleInformation(this.candles[this.candles.length - 1]);
-         this.yPercent.domain(techan.scale.plot.percent(this.y, accessor(this.candles[indicatorPreRoll])).domain());
+         this.yPercent.domain(techan.scale.plot.percent(this.y, accessor(data[indicatorPreRoll])).domain());
       }
 
-      this.yVolume.domain(techan.scale.plot.volume(postRollData).domain());
+      // Stash for zooming
+      this.zoomableInit = this.x.zoomable().domain([indicatorPreRoll, data.length]).copy(); // Zoom in a little to hide indicator preroll
+      this.yInit = this.y.copy();
+      this.yPercentInit = this.yPercent.copy();                   
 
-      this.macdData = techan.indicator.macd()(this.candles);
-      this.macdScale.domain(techan.scale.plot.macd(this.macdData).domain());
+      //if we already have a current zoom, we'll use it
+      if(this.currentZoom) {
+         this.x.zoomable().domain(this.currentZoom.rescaleX(this.zoomableInit).domain());
+         this.y.domain(this.currentZoom.rescaleY(this.yInit).domain());
+         this.yPercent.domain(this.currentZoom.rescaleY(this.yPercentInit).domain());
+      }
+
+      //this.macdData = techan.indicator.macd()(this.candles);
+      this.volumeScale.domain(techan.scale.plot.volume(this.candles).domain());
       this.rsiData = techan.indicator.rsi()(this.candles);
       this.rsiScale.domain(techan.scale.plot.rsi(this.rsiData).domain());
 
-      this.x.zoomable().domain([indicatorPreRoll, this.candles.length]); // Zoom in a little to hide indicator preroll
-      this.resize(selection);
+      this.resize();
 
       svg.select("g.candlestick").datum(this.candles).call(this.candlestick);
       if (this.candles.length > 0) {
          svg.select("g.closeValue.annotation").datum([this.candles[this.candles.length - 1]]).call(this.closeAnnotation);
       }
-      svg.select("g.volume").datum(this.candles).call(this.volume);
+
       svg.select("g.sma.ma-0").datum(techan.indicator.sma().period(10)(this.candles)).call(this.sma0);
       svg.select("g.sma.ma-1").datum(techan.indicator.sma().period(20)(this.candles)).call(this.sma1);
       svg.select("g.ema.ma-2").datum(techan.indicator.ema().period(50)(this.candles)).call(this.ema2);
+      svg.select("g.volume .volume-plot").datum(this.candles).call(this.volume);
 
-      svg.select("g.crosshair.ohlc").call(this.ohlcCrosshair);
-
-      // svg.select("g.macd .indicator-plot").datum(this.macdData).call(this.macd);
-      // svg.select("g.rsi .indicator-plot").datum(this.rsiData).call(this.rsi);
-
-      // svg.select("g.crosshair.macd").call(this.macdCrosshair);
-      // svg.select("g.crosshair.rsi").call(this.rsiCrosshair);
+      svg.select("g.crosshair.ohlc").call(this.ohlcCrosshair).call(this.zoom);
+      svg.select("g.crosshair.volume").call(this.volumeCrosshair).call(this.zoom);
    }
 
-   draw(selection): void {
+   draw(): void {
       // debugger;
-      var svg = selection.select("svg");
-      svg.select("g.x.axis.bottom").call(this.xAxis);
-      svg.select("g.x.axis.top").call(this.xAxisTop);
+      var svg = this.svg;
+      svg.select("g.x.axis").call(this.xAxis);
       svg.select("g.ohlc .axis").call(this.yAxis);
-      svg.select("g.volume.axis").call(this.volumeAxis);
       svg.select("g.percent.axis").call(this.percentAxis);
 
-      // svg.select("g.macd .axis.right").call(this.macdAxis);
-      // svg.select("g.rsi .axis.right").call(this.rsiAxis);
-      // svg.select("g.macd .axis.left").call(this.macdAxisLeft);
-      // svg.select("g.rsi .axis.left").call(this.rsiAxisLeft);
+      svg.select("g.volume .axis.right").call(this.volumeAxisRight);
+      svg.select("g.volume .axis.left").call(this.volumAxisLeft);
 
-      this.updateValues(selection);
+      this.updateValues();
+   }
 
-      // Obsolete/not usable cause we're updating with live-values
-      // We know the data does not change, a simple refresh that does not perform data joins will suffice.
-      // svg.select("g.candlestick").call(candlestick.refresh);
-      // svg.select("g.closeValue.annotation").call(closeAnnotation.refresh);
-      // svg.select("g.volume").call(volume.refresh);
-      // svg.select("g .sma.ma-0").call(sma0.refresh);
-      // svg.select("g .sma.ma-1").call(sma1.refresh);
-      // svg.select("g .ema.ma-2").call(ema2.refresh);
-      // svg.select("g.macd .indicator-plot").call(macd.refresh);
-      // svg.select("g.rsi .indicator-plot").call(rsi.refresh);
-      // svg.select("g.crosshair.ohlc").call(ohlcCrosshair.refresh);
-      // svg.select("g.crosshair.macd").call(macdCrosshair.refresh);
-      // svg.select("g.crosshair.rsi").call(rsiCrosshair.refresh);
+   /** Update x and y scaling properties and redraw chart */
+   zoomed() {
+      if (d3.event.sourceEvent && d3.event.sourceEvent.type === "brush") return; // ignore zoom-by-brush
+
+      this.currentZoom = d3.event.transform;
+
+      this.x.zoomable().domain(this.currentZoom.rescaleX(this.zoomableInit).domain());
+      this.y.domain(this.currentZoom.rescaleY(this.yInit).domain());
+      this.yPercent.domain(this.currentZoom.rescaleY(this.yPercentInit).domain());
+
+      this.svg.select("g.x.axis").call(this.xAxis);
+      this.svg.select("g.ohlc .axis").call(this.yAxis);
+      this.svg.select("g.percent.axis").call(this.percentAxis);
+
+      this.svg.select("g.volume .axis.right").call(this.volumeAxisRight);
+      this.svg.select("g.volume .axis.left").call(this.volumAxisLeft);
+
+      //refresh components with current values because the values didn't change..
+      this.svg.select("g.candlestick").call(this.candlestick.refresh);
+      this.svg.select("g.closeValue.annotation").call(this.closeAnnotation.refresh);
+      this.svg.select("g .sma.ma-0").call(this.sma0.refresh);
+      this.svg.select("g .sma.ma-1").call(this.sma1.refresh);
+      this.svg.select("g .ema.ma-2").call(this.ema2.refresh);
+
+      this.svg.select("g.volume .volume-plot").call(this.volume.refresh);
+
+      this.svg.select("g.crosshair.ohlc").call(this.ohlcCrosshair.refresh);
+      this.svg.select("g.crosshair.volume").call(this.volumeCrosshair.refresh);
+   }   
+
+   reset() {
+      this.currentZoom = null;
+      this.draw();
    }
 
    ohlcCrosshairMove(coords) {

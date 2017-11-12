@@ -1,3 +1,4 @@
+@import 'themes.scss';
 
 div#bigChart {
    height: 100%;
@@ -48,6 +49,19 @@ path.candle.up {
    stroke: #00AA00;
 }
 
+.volume-plot {
+   stroke: $dark-background-color;
+
+   .up {
+      fill: #00AA00;
+   }
+
+   .down {
+      fill: #FF0000;
+   }
+}
+
+
 path.candle.down {
    fill: #FF0000;
    stroke: #FF0000;
@@ -78,32 +92,28 @@ path.volume {
    stroke: #ff7f0e;
 }
 
-button {
-   position: absolute;
-   right: 110px;
-   top: 25px;
-}
+path {
+   &.macd {
+      stroke: #aec7e8;
+   }
 
-path.macd {
-   stroke: #aec7e8;
-}
+   &.signal {
+      stroke: #FF9999;
+   }
 
-path.signal {
-   stroke: #FF9999;
-}
+   &.zero {
+      stroke: #BBBBBB;
+      stroke-dasharray: 0;
+      stroke-opacity: 0.5;
+   }
 
-path.zero {
-   stroke: #BBBBBB;
-   stroke-dasharray: 0;
-   stroke-opacity: 0.5;
-}
+   &.difference {
+      fill: #777777;
+   }
 
-path.difference {
-   fill: #777777;
-}
-
-path.rsi {
-   stroke: #aec7e8;
+   &.rsi {
+      stroke: #aec7e8;
+   }
 }
 
 path.overbought, path.oversold {
@@ -121,54 +131,6 @@ path.middle, path.zero {
    stroke-width: 0.7;
 }
 
-.interaction path, .interaction circle {
-   pointer-events: all;
-}
-
-.interaction .body {
-   cursor: move;
-}
-
-.trendlines .interaction .start, .trendlines .interaction .end {
-   cursor: nwse-resize;
-}
-
-.trendline circle {
-   stroke-width: 0;
-   display: none;
-}
-.mouseover .trendline path {
-   stroke-width: 1;
-}
-
-.mouseover .trendline circle {
-   stroke-width: 1;
-   fill: yellow;
-   display: inline;
-}
-
-.supstance path {
-   stroke-dasharray: 2, 2;
-}
-
-.supstances .interaction path {
-   pointer-events: all;
-   cursor: ns-resize;
-}
-
-.supstances .axisannotation {
-   display: none;
-}
-
-.supstances .mouseover .axisannotation {
-   display: inline;
-}
-
-.supstances .axisannotation path {
-   fill: #806517;
-   stroke: none;
-}
-
 .mouseover .supstance path {
    stroke-width: 1.5;
 }
@@ -184,4 +146,18 @@ path.middle, path.zero {
 
 .crosshair .axisannotation path {
    fill: #777777;
+}
+
+.settings {
+   padding: 10px;
+}
+
+.symbol {
+   font-size: 12px;
+}
+
+#zoomPane {
+   cursor: move;
+   fill: none;
+   pointer-events: all;
 }

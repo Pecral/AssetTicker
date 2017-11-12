@@ -1,18 +1,6 @@
-import { ExchangeAssetPairComponent } from './components/asset-overview/exchange-asset-pair/exchange-asset-pair.component';
-import { AssetDetailComponent } from './components/asset-detail/asset-detail.component';
-import { AssetOverviewComponent } from './components/asset-overview/asset-overview.component';
-import { TechanLiveComponent } from './components/techan-live/techan-live.component';
-import { TechanChartComponent } from './components/techan-chart/techan-chart.component';
-import { ChartComponent } from './components/chart/chart.component';
-import { TradeOverviewComponent } from './components/trade-overview/trade-overview.component';
-import { OrderBookComponent } from './components/order-book/order-book.component';
-import { AssetHandlerService } from './shared/services/asset-handler/asset-handler.service';
-import { ExchangeTickerHandlerService } from './shared/services/exchange-ticker-handler.service';
-import { BitfinexTickerService } from './shared/services/bitfinex/bitfinex-ticker.service';
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule, LOCALE_ID } from '@angular/core';
 
-import { AppComponent } from './app.component';
 import { HttpModule } from '@angular/http';
 import { FormsModule } from '@angular/forms';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -20,6 +8,21 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {AutoCompleteModule, DropdownModule} from 'primeng/primeng';
 import {PerfectScrollbarModule, PerfectScrollbarConfigInterface} from 'ngx-perfect-scrollbar';
 import { NgxAutoScroll } from 'ngx-auto-scroll/lib/ngx-auto-scroll.directive';
+
+/** Services */
+import { GdaxExchangeService } from './shared/services/gdax/gdax-exchange.service';
+import { AssetHandlerService } from './shared/services/asset-handler/asset-handler.service';
+import { ExchangeTickerHandlerService } from './shared/services/exchange-ticker-handler.service';
+import { BitfinexTickerService } from './shared/services/bitfinex/bitfinex-ticker.service';
+
+/** Components */
+import { AppComponent } from './app.component';
+import { ExchangeAssetPairComponent } from './components/asset-overview/exchange-asset-pair/exchange-asset-pair.component';
+import { AssetDetailComponent } from './components/asset-detail/asset-detail.component';
+import { AssetOverviewComponent } from './components/asset-overview/asset-overview.component';
+import { CandleChartComponent } from './components/candle-chart/candle-chart.component';
+import { TradeOverviewComponent } from './components/trade-overview/trade-overview.component';
+import { OrderBookComponent } from './components/order-book/order-book.component';
 
 import { D3Service } from 'd3-ng2-service'; 
 import { Routes, RouterModule } from '@angular/router';
@@ -44,9 +47,7 @@ const appRoutes: Routes = [
 
     OrderBookComponent,
     TradeOverviewComponent,
-    ChartComponent,
-    TechanChartComponent,
-    TechanLiveComponent,
+    CandleChartComponent,
 
     NgxAutoScroll,
     CurrencyValueFormatterPipe
@@ -66,6 +67,7 @@ const appRoutes: Routes = [
   providers: [
     ExchangeTickerHandlerService,
     BitfinexTickerService,
+    //GdaxExchangeService,
     D3Service,
 
     AssetHandlerService,
