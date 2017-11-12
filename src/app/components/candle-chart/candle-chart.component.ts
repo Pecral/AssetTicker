@@ -59,7 +59,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
    dim = {
       width: null, height: null,
-      margin: { top: 20, right: 70, bottom: 150, left: 70 },
+      margin: { top: 20, right: 70, bottom: 100, left: 60 },
       plot: { width: null, height: null },
       ohlc: { height: null },
       indicator: { height: null, padding: null, top: null, bottom: null }
@@ -68,7 +68,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
    private x: any;
    private y: any;
    private yPercent: any;
-   
+
    private zoom: any;
    private currentZoom: any;
    private zoomableInit: any;
@@ -105,6 +105,14 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
    private rsiAnnotationLeft: any;
    private rsiScale: any;
    private rsiCrosshair: any;
+
+   private legendTimeFormat: any;
+   private legendCandleTime:any;
+   private legendCandleOpen:any;
+   private legendCandleHigh:any;
+   private legendCandleLow:any;
+   private legendCandleClose:any;
+   private legendCandlePercent:any;
 
    //data properties
    //private macdData: any;
@@ -290,11 +298,57 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
          .attr("class", "chart")
          .attr("transform", "translate(" + this.dim.margin.left + "," + this.dim.margin.top + ")");
 
-      svg.append('text')
-         .attr("class", "symbol")
-         .attr("x", 5)
-         .attr("y", 15)
-         .text("Stock name");
+      //initialize legend
+      this.legendTimeFormat = d3.timeFormat('%b %d, %Y, %H:%M');
+
+      let legend = svg.append("g")
+         .attr("class", "legend")
+         .attr("transform", "translate(0, 15)");
+
+      this.legendCandleTime = legend.append('text')
+         .attr("class", "legend-time")
+         .text("Nov 03, 2017, 20:24")
+         .attr("x", "5");
+
+      legend.append("text")
+         .attr("class", "legend-header")
+         .text("O:")
+         .attr("x", "130");
+
+      this.legendCandleOpen = legend.append('text')
+         .attr("class", "legend-open")
+         .text("5973.0")
+         .attr("x", "145");
+
+      legend.append("text")
+         .attr("class", "legend-header")
+         .text("H:")
+         .attr("x", "200");         
+
+      this.legendCandleHigh = legend.append('text')
+         .attr("class", "legend-high")
+         .text("5973.0")
+         .attr("x", "215");
+
+      legend.append("text")
+         .attr("class", "legend-header")
+         .text("L:")
+         .attr("x", "270");         
+
+      this.legendCandleLow = legend.append('text')
+         .attr("class", "legend-low")
+         .text("5973.0")
+         .attr("x", "285");
+
+      legend.append("text")
+         .attr("class", "legend-header")
+         .text("C:")
+         .attr("x", "340");         
+
+      this.legendCandleClose = legend.append('text')
+         .attr("class", "legend-close")
+         .text("5973.0")
+         .attr("x", "355");
 
       svg.append("g")
          .attr("class", "x axis bottom");
@@ -315,7 +369,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
          .attr("y", -12)
          .attr("dy", ".71em")
          .style("text-anchor", "end")
-         .text("Price ($)");         
+         .text("Price");         
 
       ohlcSelection.append("g")
          .attr("class", "closeValue annotation up");
@@ -561,7 +615,13 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
    }
 
    updateLegendWithCandleInformation(candle: CandleStick) {
-      let legendText = d3.select("#bigChart svg text.symbol")["_groups"][0][0];
-      legendText.innerHTML = `Close: ${candle.close} Volume: ${candle.volume.toFixed(3)}`;
+      //let legendText = d3.select("#bigChart svg text.symbol")["_groups"][0][0];
+
+      this.legendCandleTime.text(this.legendTimeFormat(candle.date));
+      this.legendCandleClose.text(candle.close.toFixed(2));
+      this.legendCandleOpen.text(candle.open.toFixed(2));
+      this.legendCandleHigh.text(candle.high.toFixed(2));
+      this.legendCandleLow.text(candle.low.toFixed(2));
+      //legendText.innerHTML = `Close: ${candle.close} Volume: ${candle.volume.toFixed(3)}`;
    }
 }

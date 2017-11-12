@@ -10,11 +10,6 @@ svg {
    font: 10px sans-serif;
 }
 
-text.version {
-   fill: #555555;
-   font: 10px sans-serif;
-}
-
 .axis path,
 .axis line {
    fill: none;
@@ -160,4 +155,12 @@ path.middle, path.zero {
    cursor: move;
    fill: none;
    pointer-events: all;
+}
+
+.legend text {
+   font-size: 12px;
+
+   &.legend-header {
+      fill: grey;
+   }
 }
