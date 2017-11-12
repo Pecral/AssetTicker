@@ -1,7 +1,8 @@
+import { Component, OnInit, Input, SimpleChanges, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs/Subscription';
+
 import { ExchangeTickerHandlerService } from './../../shared/services/exchange-ticker-handler.service';
 import { AssetTrade } from './../../shared/models/asset-trade';
-import { Component, OnInit, Input, SimpleChanges, OnDestroy } from '@angular/core';
 import { ExchangeTickerType } from '../../shared/models/exchange-ticker-type';
 import { ExchangeTicker } from '../../shared/services/exchange-ticker';
 

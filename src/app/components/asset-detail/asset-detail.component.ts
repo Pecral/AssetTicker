@@ -1,9 +1,12 @@
-import { Subscription } from 'rxjs/Subscription';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
+import { Subscription } from 'rxjs/Subscription';
+
+import { ExchangeTickerHandlerService } from '../../shared/services/exchange-ticker-handler.service';
+
 import { ExchangeTicker } from '../../shared/services/exchange-ticker';
 import { ExchangeTickerType } from '../../shared/models/exchange-ticker-type';
-import { ExchangeTickerHandlerService } from '../../shared/services/exchange-ticker-handler.service';
 import { AssetTrade } from '../../shared/models/asset-trade';
 
 @Component({
@@ -37,7 +40,8 @@ export class AssetDetailComponent implements OnInit, OnDestroy {
    constructor(
       private route: ActivatedRoute,
       private router: Router,
-      private exchangeHandler: ExchangeTickerHandlerService) { }
+      private exchangeHandler: ExchangeTickerHandlerService,
+      private titleService: Title) { }
 
    ngOnInit() {
       this.route.params.subscribe(params => {
@@ -115,6 +119,8 @@ export class AssetDetailComponent implements OnInit, OnDestroy {
          //always save the latest subscripton
          this.tradeSubscription = this.currentExchange.subscribeToAssetTrades(pair).filter(trade => trade !== null).subscribe(assetTrade => {
             this.lastTrade = assetTrade;
+            //update tab title
+            this.titleService.setTitle(`${assetTrade.price} ${this.currentSymbolPair} - ${ExchangeTickerType[this.currentExchange.exchangeType]} Chart`);
          });
       })
    }   

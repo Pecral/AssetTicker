@@ -21,6 +21,10 @@ text {
    fill: $white-blue;
 }
 
+.axisannotation text, .annotation text {
+   fill: white !important;
+}
+
 path {
    fill: none;
    stroke-width: 1;

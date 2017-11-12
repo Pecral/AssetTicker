@@ -1,7 +1,8 @@
+import { Component, OnInit, Input, OnChanges } from '@angular/core';
+
 import { OrderBookPosition } from './../../shared/models/order-book-position';
 import { ExchangeTickerHandlerService } from './../../shared/services/exchange-ticker-handler.service';
 import { OrderBook } from './../../shared/models/order-book';
-import { Component, OnInit, Input, OnChanges } from '@angular/core';
 import { ExchangeTickerType } from '../../shared/models/exchange-ticker-type';
 
 @Component({

@@ -46,6 +46,7 @@
          border-color: $dark-background-color;
          -webkit-animation: slide-in-fwd-center 0.7s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
          animation: slide-in-fwd-center 0.7s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+         
          &.trade-buy .trade-column-price {
             color: $light-green;
          }

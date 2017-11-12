@@ -1,13 +1,14 @@
+import { Component, OnInit, Input, OnDestroy, OnChanges, ViewEncapsulation, ChangeDetectorRef } from '@angular/core';
+import { trigger, state, style, transition, animate } from '@angular/animations';
+import { Subscription } from 'rxjs/Subscription';
+
 import { Selection } from 'd3-selection';
+import { D3, D3Service, ScaleTime, ScaleLinear } from 'd3-ng2-service';
+
 import { CandleStick } from './../../../shared/models/candle-stick';
 import { ExchangeTickerType } from './../../../shared/models/exchange-ticker-type';
 import { ExchangeTickerHandlerService } from './../../../shared/services/exchange-ticker-handler.service';
-import { Subscription } from 'rxjs/Subscription';
 import { ExchangeAssetPair, PriceChangeState } from './../../../shared/models/exchange-asset-pair';
-import { Component, OnInit, Input, OnDestroy, OnChanges, ViewEncapsulation } from '@angular/core';
-import { trigger, state, style, transition, animate } from '@angular/animations';
-import { ChangeDetectorRef } from '@angular/core';
-import { D3, D3Service, ScaleTime, ScaleLinear } from 'd3-ng2-service';
 
 import * as d3 from 'd3';
 import * as techan from 'techan';
@@ -134,12 +135,12 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
 
             if (previousPrice < tickerMessage.lastPrice) {
                //trigger change detection for fast switches
-               //this.changeDetectorRef.detectChanges();
+               this.changeDetectorRef.detectChanges();
                //set to rising price-change-state because the new price is higher
                this.priceChangeState = PriceChangeState.Rising;
             }
             else if (previousPrice > tickerMessage.lastPrice) {
-               //this.changeDetectorRef.detectChanges();
+               this.changeDetectorRef.detectChanges();
                //set to falling price-change-state because the new price is lower
                this.priceChangeState = PriceChangeState.Falling;
             }

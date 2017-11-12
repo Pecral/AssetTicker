@@ -1,13 +1,15 @@
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
+
 import { D3Service, D3 } from 'd3-ng2-service';
 import { TickerMessage } from './../../shared/models/ticker-message';
 import { ExchangeTickerType } from './../../shared/models/exchange-ticker-type';
 import { AssetPair } from './../../shared/models/asset-pair';
 import { ExchangeTickerHandlerService } from './../../shared/services/exchange-ticker-handler.service';
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { ExchangeTicker } from '../../shared/services/exchange-ticker';
 import { Asset } from '../../shared/models/asset';
 import { ExchangeAssetPair } from '../../shared/models/exchange-asset-pair';
-import { Router } from '@angular/router';
 
 @Component({
    selector: 'asset-overview',
@@ -30,10 +32,12 @@ export class AssetOverviewComponent implements OnInit {
 
    private exchangeServices: ExchangeTicker[] = [];
 
-   constructor(private _exchangeHandler: ExchangeTickerHandlerService, private router: Router) {
+   constructor(private _exchangeHandler: ExchangeTickerHandlerService, private router: Router, private titleService: Title) {
    }
 
    ngOnInit() {
+
+      this.titleService.setTitle("Asset Overview");
 
       this.availableExchanges = Array.from(this._exchangeHandler.exchangeServiceMap.keys()).map(x => ExchangeTickerType[x].toString());
 

@@ -1,17 +1,18 @@
-import { D3Service, D3, Axis, DSVParsedArray } from 'd3-ng2-service';
-import { CandleStick } from './../../shared/models/candle-stick';
-import { Subscription } from 'rxjs/Subscription';
-import { ExchangeTickerHandlerService } from './../../shared/services/exchange-ticker-handler.service';
 import { Component, OnInit, Input, ElementRef, ViewEncapsulation, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subscription } from 'rxjs/Subscription';
+
+import { ExchangeTickerHandlerService } from './../../shared/services/exchange-ticker-handler.service';
+import { CandleStick } from './../../shared/models/candle-stick';
 import { ExchangeTickerType } from '../../shared/models/exchange-ticker-type';
 import { ExchangeTicker } from '../../shared/services/exchange-ticker';
+
 import { Selection, BaseType, ArrayLike, ValueFn } from 'd3-selection';
+import { D3Service, D3, Axis, DSVParsedArray } from 'd3-ng2-service';
 
 import * as d3 from 'd3';
 import {event as currentEvent} from 'd3-selection';
 import * as techan from 'techan';
-import { Router } from '@angular/router';
-
 
 @Component({
    selector: 'candle-chart',
@@ -53,7 +54,6 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
    }
 
    //#region D3/Techan settings
-   private d3: D3; // <-- Define the private member which will hold the d3 reference
    private parentNativeElement: any;
    private svg: any; //probably Selection<SVGSVGElement, any, null, undefined>;  
 
@@ -145,8 +145,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
    private candlesSnapshotSubscription: Subscription;
    private candles: CandleStick[] = [];
 
-   constructor(private exchangeHandler: ExchangeTickerHandlerService, private element: ElementRef, private d3Service: D3Service, private router: Router) {
-      this.d3 = this.d3Service.getD3(); // <-- obtain the d3 object from the D3 Service
+   constructor(private exchangeHandler: ExchangeTickerHandlerService, private element: ElementRef, private router: Router) {
       this.parentNativeElement = this.element.nativeElement;
    }
 
