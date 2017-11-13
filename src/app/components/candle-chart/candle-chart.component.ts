@@ -11,7 +11,7 @@ import { Selection, BaseType, ArrayLike, ValueFn } from 'd3-selection';
 import { D3Service, D3, Axis, DSVParsedArray } from 'd3-ng2-service';
 
 import * as d3 from 'd3';
-import {event as currentEvent} from 'd3-selection';
+import { event as currentEvent } from 'd3-selection';
 import * as techan from 'techan';
 
 @Component({
@@ -107,12 +107,15 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
    private rsiCrosshair: any;
 
    private legendTimeFormat: any;
-   private legendCandleTime:any;
-   private legendCandleOpen:any;
-   private legendCandleHigh:any;
-   private legendCandleLow:any;
-   private legendCandleClose:any;
-   private legendCandlePercent:any;
+   private legendCandleTime: any;
+   private legendCandleOpen: any;
+   private legendCandleHigh: any;
+   private legendCandleLow: any;
+   private legendCandleClose: any;
+   private legendCandlePercent: any;
+
+   private highlightMaximumPriceText: any;
+   private highlightMinimumPriceText: any;
 
    //data properties
    //private macdData: any;
@@ -189,9 +192,11 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
                   this.candles = this.currentExchange.getCandlesSnapshot(this._symbolPair, this.timeframe).slice();
 
                   //load candles
-                  if(this.chartIsInitialized) {
-                     this.loadCandleSticks();                     
+                  if (this.chartIsInitialized) {
+                     this.loadCandleSticks();
                   }
+
+
 
                   //subscribe for new candles
                   this.candleSubscription = this.currentExchange.subscribeToCandles(this._symbolPair, this.timeframe).filter(candle => candle !== null).subscribe(candle => {
@@ -205,7 +210,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
                         this.candles.push(candle);
                      }
 
-                     if(this.chartIsInitialized) {
+                     if (this.chartIsInitialized) {
                         this.loadCandleSticks();
                      }
                   });
@@ -225,6 +230,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
       this.candles = this.candles.sort((a, b) => a.date.getTime() - b.date.getTime());
 
       this.draw();
+      this.highlightPeakCandles();
    }
 
    ngOnInit(): void {
@@ -232,7 +238,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
       this.y = d3.scaleLinear();
       this.zoom = d3.zoom()
          .scaleExtent([0.5, 5])
-         .on("zoom", this.zoomed.bind(this));  
+         .on("zoom", this.zoomed.bind(this));
       this.yPercent = this.y.copy();
       this.indicatorTop = d3.scaleLinear();
       this.candlestick = techan.plot.candlestick().xScale(this.x).yScale(this.y);
@@ -297,58 +303,6 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
          .attr("class", "chart")
          .attr("transform", "translate(" + this.dim.margin.left + "," + this.dim.margin.top + ")");
 
-      //initialize legend
-      this.legendTimeFormat = d3.timeFormat('%b %d, %Y, %H:%M');
-
-      let legend = svg.append("g")
-         .attr("class", "legend")
-         .attr("transform", "translate(0, 15)");
-
-      this.legendCandleTime = legend.append('text')
-         .attr("class", "legend-time")
-         .text("Nov 03, 2017, 20:24")
-         .attr("x", "5");
-
-      legend.append("text")
-         .attr("class", "legend-header")
-         .text("O:")
-         .attr("x", "130");
-
-      this.legendCandleOpen = legend.append('text')
-         .attr("class", "legend-open")
-         .text("5973.0")
-         .attr("x", "145");
-
-      legend.append("text")
-         .attr("class", "legend-header")
-         .text("H:")
-         .attr("x", "200");         
-
-      this.legendCandleHigh = legend.append('text')
-         .attr("class", "legend-high")
-         .text("5973.0")
-         .attr("x", "215");
-
-      legend.append("text")
-         .attr("class", "legend-header")
-         .text("L:")
-         .attr("x", "270");         
-
-      this.legendCandleLow = legend.append('text')
-         .attr("class", "legend-low")
-         .text("5973.0")
-         .attr("x", "285");
-
-      legend.append("text")
-         .attr("class", "legend-header")
-         .text("C:")
-         .attr("x", "340");         
-
-      this.legendCandleClose = legend.append('text')
-         .attr("class", "legend-close")
-         .text("5973.0")
-         .attr("x", "355");
-
       svg.append("g")
          .attr("class", "x axis bottom");
 
@@ -368,7 +322,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
          .attr("y", -12)
          .attr("dy", ".71em")
          .style("text-anchor", "end")
-         .text("Price");         
+         .text("Price");
 
       ohlcSelection.append("g")
          .attr("class", "closeValue annotation up");
@@ -404,7 +358,58 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
       volumeSelection.append("g")
          .attr("class", "axis left");
+         
+      //initialize legend
+      this.legendTimeFormat = d3.timeFormat('%b %d, %Y, %H:%M');
 
+      let legend = svg.append("g")
+         .attr("class", "legend")
+         .attr("transform", "translate(0, 15)");
+
+      this.legendCandleTime = legend.append('text')
+         .attr("class", "legend-time")
+         .text("Nov 03, 2017, 20:24")
+         .attr("x", "5");
+
+      legend.append("text")
+         .attr("class", "legend-header")
+         .text("O:")
+         .attr("x", "130");
+
+      this.legendCandleOpen = legend.append('text')
+         .attr("class", "legend-open")
+         .text("5973.0")
+         .attr("x", "145");
+
+      legend.append("text")
+         .attr("class", "legend-header")
+         .text("H:")
+         .attr("x", "200");
+
+      this.legendCandleHigh = legend.append('text')
+         .attr("class", "legend-high")
+         .text("5973.0")
+         .attr("x", "215");
+
+      legend.append("text")
+         .attr("class", "legend-header")
+         .text("L:")
+         .attr("x", "270");
+
+      this.legendCandleLow = legend.append('text')
+         .attr("class", "legend-low")
+         .text("5973.0")
+         .attr("x", "285");
+
+      legend.append("text")
+         .attr("class", "legend-header")
+         .text("C:")
+         .attr("x", "340");
+
+      this.legendCandleClose = legend.append('text')
+         .attr("class", "legend-close")
+         .text("5973.0")
+         .attr("x", "355");
       // Add trendlines and other interactions last to be above zoom pane
       svg.append('g')
          .attr("class", "crosshair ohlc");
@@ -413,7 +418,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
          .attr("class", "crosshair volume");
 
       this.updateValues();
-      selection.call(this.draw.bind(this));  
+      selection.call(this.draw.bind(this));
 
       let resizeTimer;
       let interval = Math.floor(1000 / 60 * 10);
@@ -528,7 +533,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
       // Stash for zooming
       this.zoomableInit = this.x.zoomable().domain([indicatorPreRoll, data.length]).copy(); // Zoom in a little to hide indicator preroll
       this.yInit = this.y.copy();
-      this.yPercentInit = this.yPercent.copy();                   
+      this.yPercentInit = this.yPercent.copy();
 
       //if we already have a current zoom, we'll use it
       if(this.currentZoom) {
@@ -599,7 +604,9 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
       this.svg.select("g.crosshair.ohlc").call(this.ohlcCrosshair.refresh);
       this.svg.select("g.crosshair.volume").call(this.volumeCrosshair.refresh);
-   }   
+
+      this.highlightPeakCandles();
+   }
 
    reset() {
       this.currentZoom = null;
@@ -622,5 +629,46 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
       this.legendCandleHigh.text(candle.high.toFixed(2));
       this.legendCandleLow.text(candle.low.toFixed(2));
       //legendText.innerHTML = `Close: ${candle.close} Volume: ${candle.volume.toFixed(3)}`;
+   }
+
+   /**
+    * Sets a text-element at the maximum and minimum candle of the current chart which display the peak's price
+    */
+   highlightPeakCandles() {
+      let visibleCandles: Array<CandleStick> = this.x.domain().map(x => this.candles.find(candle => candle.date.getTime() == x.getTime()));
+      let highestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.high > maxValue.high ? current : maxValue), visibleCandles[0]);
+      let lowestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.low < maxValue.low ? current : maxValue), visibleCandles[0]);
+
+      let xCoordinateMax = this.x(highestCandle.date);
+      let yCoordinateMax = this.y(highestCandle.high);
+
+      if (!this.highlightMaximumPriceText) {
+         this.highlightMaximumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price maximum-price");
+      }
+
+      if (!this.highlightMinimumPriceText) {
+         this.highlightMinimumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price minimum-price");
+      }
+
+      this.highlightMaximumPriceText.attr("x", xCoordinateMax - 15)
+         .attr("y", yCoordinateMax - 5)
+         .text(highestCandle.high.toFixed(2));
+
+      let xCoordinateMin = this.x(lowestCandle.date);
+      let yCoordinateMin = this.y(lowestCandle.low);
+
+      console.log("x")
+
+      this.highlightMinimumPriceText.attr("x", xCoordinateMin - 15)
+         .attr("y", yCoordinateMin + 13)
+         .text(lowestCandle.high.toFixed(2));
+   }
+
+   getCandleCoordinate(candle: CandleStick): { x: number, y: number } {
+      let xCoordinate = this.x(candle.date);
+
+      let yCoordinate = this.y(candle.high);
+
+      return { x: xCoordinate, y: yCoordinate };
    }
 }
