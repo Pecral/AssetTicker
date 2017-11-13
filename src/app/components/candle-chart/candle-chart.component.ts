@@ -26,7 +26,6 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
    @Input()
    set symbolPair(value: string) {
       this._symbolPair = value;
-      console.log('set symbolPair');
       this.subscribeToCandles();
    }
    get symbolPair(): string {
@@ -635,12 +634,39 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
     * Sets a text-element at the maximum and minimum candle of the current chart which display the peak's price
     */
    highlightPeakCandles() {
+      let chartWidth = this.dim.plot.width;
+      let chartHeight = this.dim.ohlc.height;
+
+      function preventXCoordinateOutOfBounce(coordinate: number): number {
+         if(coordinate < 18) {
+            return 18;
+         }
+         else if(coordinate > (chartWidth - 33)) {
+            return chartWidth -33;
+         }
+         else {
+            return coordinate;
+         }
+      }
+
+      function preventYCoordinateOutOfBounce(coordinate: number): number {
+         if(coordinate < 20) {
+            return 20;
+         }
+         else if(coordinate > (chartHeight - 15)) {
+            return chartHeight - 15;
+         }
+         else {
+            return coordinate;
+         }
+      }      
+
       let visibleCandles: Array<CandleStick> = this.x.domain().map(x => this.candles.find(candle => candle.date.getTime() == x.getTime()));
       let highestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.high > maxValue.high ? current : maxValue), visibleCandles[0]);
       let lowestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.low < maxValue.low ? current : maxValue), visibleCandles[0]);
 
-      let xCoordinateMax = this.x(highestCandle.date);
-      let yCoordinateMax = this.y(highestCandle.high);
+      let xCoordinateMax = preventXCoordinateOutOfBounce(this.x(highestCandle.date));
+      let yCoordinateMax = preventYCoordinateOutOfBounce(this.y(highestCandle.high));
 
       if (!this.highlightMaximumPriceText) {
          this.highlightMaximumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price maximum-price");
@@ -654,10 +680,8 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
          .attr("y", yCoordinateMax - 5)
          .text(highestCandle.high.toFixed(2));
 
-      let xCoordinateMin = this.x(lowestCandle.date);
-      let yCoordinateMin = this.y(lowestCandle.low);
-
-      console.log("x")
+      let xCoordinateMin = preventXCoordinateOutOfBounce(this.x(lowestCandle.date));
+      let yCoordinateMin = preventYCoordinateOutOfBounce(this.y(lowestCandle.low));
 
       this.highlightMinimumPriceText.attr("x", xCoordinateMin - 15)
          .attr("y", yCoordinateMin + 13)
