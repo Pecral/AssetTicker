@@ -36,7 +36,7 @@
          border-color: $dark-background-color;
       }
       tr.trade-row:nth-child(odd) {
-         background-color: #14222d !important;
+         background-color: lighten($dark-background-color, 4%);
       }
 
       .trade-row {
