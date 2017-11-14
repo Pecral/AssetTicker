@@ -244,15 +244,10 @@ export class BitfinexTickerService implements ExchangeTicker, OnDestroy {
       return subscription.subject;
    }
 
-   getCandlesSnapshot(pair: string, timeFrame: string): CandleStick[] {
+   getCandlesSnapshot(pair: string, timeFrame: string): Observable<CandleStick[]> {
       let subscription = this.ensureCandlesSubscription(pair, timeFrame);
-      return subscription.candlesticks;
+      return subscription.snapshotSubject;
    }
-
-   receivedCandlestickSnapshot(pair: string, timeFrame: string): BehaviorSubject<boolean> {
-      let subscription = this.ensureCandlesSubscription(pair, timeFrame);
-      return subscription.candlestickSnapshotReceived;
-   }   
 
    unsubscribeFromCandles(pair: string, timeFrame: string): void {
       let key: string = `trade:${timeFrame}:t${pair}`;

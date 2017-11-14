@@ -157,9 +157,9 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       //Subscribe for the primary pair's hourly candles so that the 24h chart can be drawn
       let exchange = this.exchangeHandler.getExchangeTicker(ExchangeTickerType[this.exchangeAssetPair.exchange]);
       
-      exchange.receivedCandlestickSnapshot(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).filter(hasReceived => hasReceived).subscribe(received => {
+      exchange.getCandlesSnapshot(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).filter(snapshot => snapshot != null).subscribe(snapshot => {
          //save snapshot
-         this.candles = exchange.getCandlesSnapshot(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).slice();
+         this.candles = snapshot.slice();
 
          this.triggerChartRedraw();
 

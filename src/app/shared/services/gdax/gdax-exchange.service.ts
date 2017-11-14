@@ -103,10 +103,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    unsubscribeFromOrderBook(pair: string): void {
       throw new Error("Method not implemented.");
    }
-   getCandlesSnapshot(pair: string, timeFrame: string): CandleStick[] {
-      throw new Error("Method not implemented.");
-   }
-   receivedCandlestickSnapshot(pair: string, timeFrame: string): BehaviorSubject<boolean> {
+   getCandlesSnapshot(pair: string, timeFrame: string): Observable<CandleStick[]> {
       throw new Error("Method not implemented.");
    }
    subscribeToCandles(pair: string, timeFrame: string): Observable<CandleStick> {

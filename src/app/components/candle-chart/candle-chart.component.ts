@@ -186,16 +186,14 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
          this.currentExchange.websocketIsConnected.subscribe(isConnected => {
             if (isConnected) {
                //wait till snapshot is received
-               this.candlesSnapshotSubscription = this.currentExchange.receivedCandlestickSnapshot(this._symbolPair, this.timeframe).filter(hasReceived => hasReceived).subscribe(received => {
+               this.candlesSnapshotSubscription = this.currentExchange.getCandlesSnapshot(this._symbolPair, this.timeframe).filter(snapshot => snapshot != null).subscribe(snapshot => {
                   //save snapshot
-                  this.candles = this.currentExchange.getCandlesSnapshot(this._symbolPair, this.timeframe).slice();
+                  this.candles = snapshot.slice();
 
                   //load candles
                   if (this.chartIsInitialized) {
                      this.loadCandleSticks();
                   }
-
-
 
                   //subscribe for new candles
                   this.candleSubscription = this.currentExchange.subscribeToCandles(this._symbolPair, this.timeframe).filter(candle => candle !== null).subscribe(candle => {
