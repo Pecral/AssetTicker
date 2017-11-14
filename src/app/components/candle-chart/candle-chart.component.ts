@@ -650,6 +650,11 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
       }
 
       function preventYCoordinateOutOfBounce(coordinate: number): number {
+         //don't display it if the coordinate is totally out of bounce
+         if(coordinate < -20 || coordinate > (chartHeight + 20)) {
+            return;
+         }
+
          if(coordinate < 20) {
             return 20;
          }
@@ -665,34 +670,42 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
       let highestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.high > maxValue.high ? current : maxValue), visibleCandles[0]);
       let lowestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.low < maxValue.low ? current : maxValue), visibleCandles[0]);
 
-      let xCoordinateMax = preventXCoordinateOutOfBounce(this.x(highestCandle.date));
-      let yCoordinateMax = preventYCoordinateOutOfBounce(this.y(highestCandle.high));
-
       if (!this.highlightMaximumPriceText) {
          this.highlightMaximumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price maximum-price");
       }
 
       if (!this.highlightMinimumPriceText) {
          this.highlightMinimumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price minimum-price");
-      }
+      }      
 
-      this.highlightMaximumPriceText.attr("x", xCoordinateMax - 15)
+      let xCoordinateMax = preventXCoordinateOutOfBounce(this.x(highestCandle.date));
+      let yCoordinateMax = preventYCoordinateOutOfBounce(this.y(highestCandle.high));
+
+      //if the coordinates have a value (they will if they're not totally out of bounce), update the text's position
+      if(xCoordinateMax && yCoordinateMax) {
+         this.highlightMaximumPriceText.attr("x", xCoordinateMax - 15)
          .attr("y", yCoordinateMax - 5)
+         .attr("display", "initial")
          .text(highestCandle.high.toFixed(2));
+      }
+      else {
+         //otherwise hide it
+         this.highlightMaximumPriceText.attr("display", "none");
+      }
 
       let xCoordinateMin = preventXCoordinateOutOfBounce(this.x(lowestCandle.date));
       let yCoordinateMin = preventYCoordinateOutOfBounce(this.y(lowestCandle.low));
 
-      this.highlightMinimumPriceText.attr("x", xCoordinateMin - 15)
+      //if the coordinates have a value (they will if they're not totally out of bounce), update the text's position
+      if(xCoordinateMin && yCoordinateMin) {
+         this.highlightMinimumPriceText.attr("x", xCoordinateMin - 15)
          .attr("y", yCoordinateMin + 13)
-         .text(lowestCandle.high.toFixed(2));
-   }
-
-   getCandleCoordinate(candle: CandleStick): { x: number, y: number } {
-      let xCoordinate = this.x(candle.date);
-
-      let yCoordinate = this.y(candle.high);
-
-      return { x: xCoordinate, y: yCoordinate };
+         .attr("display", "initial")
+         .text(lowestCandle.low.toFixed(2));
+      }
+      else {
+         //otherwise we'll hide it
+         this.highlightMinimumPriceText.attr("display", "none");
+      }
    }
 }
