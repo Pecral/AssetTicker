@@ -357,7 +357,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
       volumeSelection.append("g")
          .attr("class", "axis left");
-         
+
       //initialize legend
       this.legendTimeFormat = d3.timeFormat('%b %d, %Y, %H:%M');
 
@@ -438,7 +438,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
          }, interval);
       });
 
-      if(this.candles.length > 0) {
+      if (this.candles.length > 0) {
          this.loadCandleSticks();
       }
 
@@ -513,6 +513,9 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
       selection.select("g.volume g.axis.left")
          .attr("transform", "translate(" + xRange[0] + ",0)");
+
+      //update peak hightlighting elements
+      this.highlightPeakCandles();
    }
 
    updateValues(): void {
@@ -535,7 +538,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
       this.yPercentInit = this.yPercent.copy();
 
       //if we already have a current zoom, we'll use it
-      if(this.currentZoom) {
+      if (this.currentZoom) {
          this.x.zoomable().domain(this.currentZoom.rescaleX(this.zoomableInit).domain());
          this.y.domain(this.currentZoom.rescaleY(this.yInit).domain());
          this.yPercent.domain(this.currentZoom.rescaleY(this.yPercentInit).domain());
@@ -634,78 +637,81 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
     * Sets a text-element at the maximum and minimum candle of the current chart which display the peak's price
     */
    highlightPeakCandles() {
-      let chartWidth = this.dim.plot.width;
-      let chartHeight = this.dim.ohlc.height;
+      if (this.candles && this.candles.length > 0) {
 
-      function preventXCoordinateOutOfBounce(coordinate: number): number {
-         if(coordinate < 18) {
-            return 18;
+         let chartWidth = this.dim.plot.width;
+         let chartHeight = this.dim.ohlc.height;
+
+         let preventXCoordinateOutOfBounce = (coordinate: number): number => {
+            if (coordinate < 18) {
+               return 18;
+            }
+            else if (coordinate > (chartWidth - 33)) {
+               return chartWidth - 33;
+            }
+            else {
+               return coordinate;
+            }
          }
-         else if(coordinate > (chartWidth - 33)) {
-            return chartWidth -33;
+
+         let preventYCoordinateOutOfBounce = (coordinate: number): number => {
+            //don't display it if the coordinate is totally out of bounce
+            if (coordinate < -20 || coordinate > (chartHeight + 20)) {
+               return;
+            }
+
+            if (coordinate < 20) {
+               return 20;
+            }
+            else if (coordinate > (chartHeight - 15)) {
+               return chartHeight - 15;
+            }
+            else {
+               return coordinate;
+            }
+         }
+
+         let visibleCandles: Array<CandleStick> = this.x.domain().map(x => this.candles.find(candle => candle.date.getTime() == x.getTime()));
+         let highestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.high > maxValue.high ? current : maxValue), visibleCandles[0]);
+         let lowestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.low < maxValue.low ? current : maxValue), visibleCandles[0]);
+
+         if (!this.highlightMaximumPriceText) {
+            this.highlightMaximumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price maximum-price");
+         }
+
+         if (!this.highlightMinimumPriceText) {
+            this.highlightMinimumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price minimum-price");
+         }
+
+         let xCoordinateMax = preventXCoordinateOutOfBounce(this.x(highestCandle.date));
+         let yCoordinateMax = preventYCoordinateOutOfBounce(this.y(highestCandle.high));
+
+         //if the coordinates have a value (they will if they're not totally out of bounce), update the text's position
+         if (xCoordinateMax && yCoordinateMax) {
+            this.highlightMaximumPriceText.attr("x", xCoordinateMax - 15)
+               .attr("y", yCoordinateMax - 5)
+               .attr("display", "initial")
+               .text(highestCandle.high.toFixed(2));
          }
          else {
-            return coordinate;
-         }
-      }
-
-      function preventYCoordinateOutOfBounce(coordinate: number): number {
-         //don't display it if the coordinate is totally out of bounce
-         if(coordinate < -20 || coordinate > (chartHeight + 20)) {
-            return;
+            //otherwise hide it
+            this.highlightMaximumPriceText.attr("display", "none");
          }
 
-         if(coordinate < 20) {
-            return 20;
-         }
-         else if(coordinate > (chartHeight - 15)) {
-            return chartHeight - 15;
+         let xCoordinateMin = preventXCoordinateOutOfBounce(this.x(lowestCandle.date));
+         let yCoordinateMin = preventYCoordinateOutOfBounce(this.y(lowestCandle.low));
+
+         //if the coordinates have a value (they will if they're not totally out of bounce), update the text's position
+         if (xCoordinateMin && yCoordinateMin) {
+            this.highlightMinimumPriceText.attr("x", xCoordinateMin - 15)
+               .attr("y", yCoordinateMin + 13)
+               .attr("display", "initial")
+               .text(lowestCandle.low.toFixed(2));
          }
          else {
-            return coordinate;
+            //otherwise we'll hide it
+            this.highlightMinimumPriceText.attr("display", "none");
          }
-      }      
-
-      let visibleCandles: Array<CandleStick> = this.x.domain().map(x => this.candles.find(candle => candle.date.getTime() == x.getTime()));
-      let highestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.high > maxValue.high ? current : maxValue), visibleCandles[0]);
-      let lowestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.low < maxValue.low ? current : maxValue), visibleCandles[0]);
-
-      if (!this.highlightMaximumPriceText) {
-         this.highlightMaximumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price maximum-price");
-      }
-
-      if (!this.highlightMinimumPriceText) {
-         this.highlightMinimumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price minimum-price");
-      }      
-
-      let xCoordinateMax = preventXCoordinateOutOfBounce(this.x(highestCandle.date));
-      let yCoordinateMax = preventYCoordinateOutOfBounce(this.y(highestCandle.high));
-
-      //if the coordinates have a value (they will if they're not totally out of bounce), update the text's position
-      if(xCoordinateMax && yCoordinateMax) {
-         this.highlightMaximumPriceText.attr("x", xCoordinateMax - 15)
-         .attr("y", yCoordinateMax - 5)
-         .attr("display", "initial")
-         .text(highestCandle.high.toFixed(2));
-      }
-      else {
-         //otherwise hide it
-         this.highlightMaximumPriceText.attr("display", "none");
-      }
-
-      let xCoordinateMin = preventXCoordinateOutOfBounce(this.x(lowestCandle.date));
-      let yCoordinateMin = preventYCoordinateOutOfBounce(this.y(lowestCandle.low));
-
-      //if the coordinates have a value (they will if they're not totally out of bounce), update the text's position
-      if(xCoordinateMin && yCoordinateMin) {
-         this.highlightMinimumPriceText.attr("x", xCoordinateMin - 15)
-         .attr("y", yCoordinateMin + 13)
-         .attr("display", "initial")
-         .text(lowestCandle.low.toFixed(2));
-      }
-      else {
-         //otherwise we'll hide it
-         this.highlightMinimumPriceText.attr("display", "none");
       }
    }
 }
