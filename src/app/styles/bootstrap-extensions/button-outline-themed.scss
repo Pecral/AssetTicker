@@ -3,7 +3,7 @@
 @mixin btn-outline-light() {
    color: $light-background-color;
    background-image: none;
-   background-color: $dark-menu-color;
+   background-color: $dark-background-color;
    border-color: $light-background-color;
    &:hover {
       background-color: $light-background-color;
@@ -50,12 +50,14 @@
    }
 }
 
-.btn-outline-dark {
+.btn-outline-dark-custom {
    @include btn-outline-dark();
+   cursor: pointer;
 }
 
-.btn-outline-light {
+.btn-outline-light-custom {
    @include btn-outline-light();
+   cursor: pointer;
 }
 
 :host-context(.dark-theme) {

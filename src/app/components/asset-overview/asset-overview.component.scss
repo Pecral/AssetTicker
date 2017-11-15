@@ -1,10 +1,58 @@
 @import 'themes.scss';
+@import './bootstrap-extensions/button-outline-themed.scss';
 
 .asset-overview-wrapper {
    display:flex;
    flex-direction: row;
    flex-wrap: wrap;
 }
+
+.menu-navbar {
+   display:flex;
+   flex-direction: row;
+   justify-content: space-between;
+   align-items: center;
+   height: 45px;
+   padding: 0px 10px;
+   background-color: $dark-background-color;
+   border-bottom: 1px solid $border-color;
+
+   .search-button {
+      padding: 7px 9px;
+      font-size: 1em;
+   }
+
+   .asset-search-input {
+      color: black;
+      margin-left: auto;
+      padding-right: 3px;
+
+      .ui-autocomplete-input {
+         height: 30px !important;
+      }
+
+      .ui-autocomplete-list-item {
+         transition: all 400ms;
+
+         &.ui-state-highlight {
+            background-color: #637988;
+         }
+      }
+   
+      .suggestion-wrapper {
+         display:flex;
+         flex-direction: row;
+         justify-content: space-between;
+         border-bottom: 1px solid black;;
+         padding-bottom: 3px;
+   
+         .suggestion-value {
+            font-weight: bold;
+         }
+      }
+   }   
+}
+
 
 .asset-overview {
    padding: 5px 5px 0px 5px;

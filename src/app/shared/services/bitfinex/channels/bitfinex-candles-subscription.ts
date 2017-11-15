@@ -10,9 +10,9 @@ export class BitfinexCandlesSubscription extends BitfinexChannelSubscription {
 
    timeframe: string;
 
-   candlesticks: CandleStick[] = [];
+   snapshotSubject: BehaviorSubject<CandleStick[]> = new BehaviorSubject<CandleStick[]>(null);
 
-   candlestickSnapshotReceived = new BehaviorSubject<boolean>(false);
+   candlesticks: CandleStick[] = [];
 
    pushIntoSubscription(message: any): void {
       //ignore heartbeats
@@ -26,7 +26,8 @@ export class BitfinexCandlesSubscription extends BitfinexChannelSubscription {
             this.handleSingleCandleStick(candleStick);
          }
 
-         this.candlestickSnapshotReceived.next(true);
+         //push candles-array in snapshot-subject
+         this.snapshotSubject.next(this.candlesticks);
       }
       else {
          this.handleSingleCandleStick(message[1]);

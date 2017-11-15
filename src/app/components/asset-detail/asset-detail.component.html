@@ -3,7 +3,7 @@
 
   <p-autoComplete [(ngModel)]="symbolPairSearchKey" [suggestions]="filteredSymbolPairs" (completeMethod)="filterSymbolPairs(symbolPairSearchKey)"
     [size]="10" [minLength]="0" placeholder="Symbol pair.." [dropdown]="true" (onSelect)="switchSymbolPair(symbolPairSearchKey)"
-    (onKeyUp)="symbolPairSearchKeyReleased($event)">
+    (onKeyUp)="symbolPairSearchKeyReleased($event)" [delay]="100">
   </p-autoComplete>
 </div>
 

@@ -82,6 +82,7 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       indicator: { height: null, padding: null, top: null, bottom: null }
    };
    //#endregion D3-Properties
+
    private chartIsInitialized: boolean = false;
 
    constructor(private changeDetectorRef: ChangeDetectorRef, private exchangeHandler: ExchangeTickerHandlerService) {
@@ -100,13 +101,15 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    ngOnChanges(): void {
-      if(this.triggerChartInitialization) {
+      if (this.triggerChartInitialization) {
          this.initializeChart();
       }
-   }   
+   }
 
    ngAfterViewInit() {
-      
+      if (this.triggerChartInitialization) {
+         this.initializeChart();
+      }
    }
 
    /** Unsubscribe from subscriptions */
@@ -153,15 +156,19 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       });
    }
 
-   private subscribeToCandles():void {
+   private subscribeToCandles(): void {
       //Subscribe for the primary pair's hourly candles so that the 24h chart can be drawn
       let exchange = this.exchangeHandler.getExchangeTicker(ExchangeTickerType[this.exchangeAssetPair.exchange]);
-      
-      exchange.receivedCandlestickSnapshot(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).filter(hasReceived => hasReceived).subscribe(received => {
+
+      exchange.getCandlesSnapshot(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).filter(snapshot => snapshot != null).subscribe(snapshot => {
          //save snapshot
-         this.candles = exchange.getCandlesSnapshot(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).slice();
+         this.candles = snapshot.slice();
 
          this.triggerChartRedraw();
+
+         if (this.candlesSubscription) {
+            this.candlesSubscription.unsubscribe();
+         }
 
          //subscribe for new candles
          this.candlesSubscription = exchange.subscribeToCandles(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).filter(candle => candle !== null).subscribe(candle => {
@@ -175,27 +182,29 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
                this.candles.push(candle);
             }
          });
-      });    
-   }   
+      });
+   }
 
    private triggerChartRedraw() {
       //sort by timestamp
       this.candles = this.candles.sort((a, b) => a.date.getTime() - b.date.getTime());
       //save only last 96 candles because this is an 24h chart (15minute-candles*4*24);
-      this.candles = this.candles.slice(this.candles.length - 96);    
-      
-      if(this.chartIsInitialized) {
+      this.candles = this.candles.slice(this.candles.length - 96);
+
+      if (this.chartIsInitialized) {
          this.drawChart(d3.select(`#overview-chart-${this.exchangeAssetPair.pair.symbol}`));
       }
    }
 
-   private initializeChart():void {
+   private initializeChart(): void {
       this.subscribeToCandles();
 
-      switch (this.chartType) {
-         case 'candles':
-            this.initializeCandlesChart();
-            break;
+      if (!this.chartIsInitialized) {
+         switch (this.chartType) {
+            case 'candles':
+               this.initializeCandlesChart();
+               break;
+         }
       }
    }
 
@@ -204,43 +213,50 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       this.y = d3.scaleLinear();
       this.candlestick = techan.plot.candlestick().xScale(this.x).yScale(this.y);
 
-      let selection = d3.select(`#overview-chart-${this.exchangeAssetPair.pair.symbol}`);
+      let chartWrapper = document.getElementById(`overview-chart-${this.exchangeAssetPair.pair.symbol}`);
 
-      let svg = selection.append('svg');
+      //continue only if the chart-wrapper is rendered to prevent timing issues
+      if (chartWrapper) {
+         let selection = d3.select(`#overview-chart-${this.exchangeAssetPair.pair.symbol}`);
 
-      let ohlcSelection = svg.append("g")
-         .attr("class", "ohlc")
-         .attr("transform", "translate(0,0)");
+         let svg = selection.append('svg');
 
-      ohlcSelection.append("g")
-         .attr("class", "candlestick")
-         .attr("clip-path", "url(#ohlcClip)");
+         let ohlcSelection = svg.append("g")
+            .attr("class", "ohlc")
+            .attr("transform", "translate(0,0)");
 
-      this.updateValues(selection);
-      selection.call(this.drawChart.bind(this));
+         ohlcSelection.append("g")
+            .attr("class", "candlestick")
+            .attr("clip-path", "url(#ohlcClip)");
 
-      let resizeTimer;
-      let interval = Math.floor(1000 / 60 * 10);
+         this.updateValues(selection);
+         selection.call(this.drawChart.bind(this));
 
-      //keep scope of functions with bound this-context
-      let resizeFunction = this.resizeCandleStickChart.bind(this);
-      let drawFunction = this.drawChart.bind(this);
+         let resizeTimer;
+         let interval = Math.floor(1000 / 60 * 10);
 
-      window.addEventListener('resize', event => {
-         //cancel resize if we're still resizing
-         if (resizeTimer !== false) {
-            clearTimeout(resizeTimer);
+         //keep scope of functions with bound this-context
+         let resizeFunction = this.resizeCandleStickChart.bind(this);
+         let drawFunction = this.drawChart.bind(this);
+
+         window.addEventListener('resize', event => {
+            //cancel resize if we're still resizing
+            if (resizeTimer !== false) {
+               clearTimeout(resizeTimer);
+            }
+            resizeTimer = setTimeout(function () {
+               selection.call(resizeFunction).call(drawFunction);
+            }, interval);
+         });
+
+         if (this.candles.length > 0) {
+            this.drawChart(selection);
          }
-         resizeTimer = setTimeout(function () {
-            selection.call(resizeFunction).call(drawFunction);
-         }, interval);
-      });
 
-      if(this.candles.length > 0) {
-         this.drawChart(selection);
+         this.chartIsInitialized = true;
       }
 
-      this.chartIsInitialized = true;
+
    }
 
    private initializeSparklineChart(): void {
@@ -254,7 +270,7 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       // .y1(function(d) { return y(d.close); });
 
       this.subscribeToCandles();
-   }   
+   }
 
    /**
     * 
@@ -298,29 +314,29 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    resizeCandleStickChart(selection): void {
-      if(selection.node()) {
+      if (selection.node()) {
          this.dim.width = selection.node().clientWidth - this.dim.margin.left - this.dim.margin.right;
          this.dim.height = selection.node().clientHeight;
-   
+
          let svgWrapper = document.querySelector('.svg-wrapper');
-   
+
          this.dim.plot.width = this.dim.width;
          this.dim.plot.height = this.dim.height - this.dim.margin.top - this.dim.margin.bottom;
          this.dim.ohlc.height = this.dim.plot.height;
-   
+
          var xRange = [0, this.dim.plot.width],
             yRange = [this.dim.ohlc.height, 0],
             ohlcVerticalTicks = Math.min(10, Math.round(this.dim.height / 70)),
             xTicks = Math.min(10, Math.round(this.dim.width / 130));
-   
-   
+
+
          this.x.range(xRange);
          this.y.range(yRange);
-   
+
          selection.select("svg")
             .attr("width", this.dim.width)
             .attr("height", this.dim.height);
-   
+
          selection.selectAll("defs #ohlcClip > rect")
             .attr("width", this.dim.plot.width)
             .attr("height", this.dim.ohlc.height);
