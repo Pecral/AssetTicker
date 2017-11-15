@@ -1,6 +1,6 @@
 <nav class="menu-navbar">
   <p-autoComplete [(ngModel)]="searchKey" class="asset-search-input" [suggestions]="filteredSearchItems" (completeMethod)="filterSearchItems($event.query)"
-    field="value" delay="150" styleClass="asset-search-input" [size]="30" [minLength]="0" [autoHighlight]="true" placeholder="Search.." (onSelect)="filterAssetOverviewBySearchSettings($event)" (onClear)="resetSearchSettings()" [scrollHeight]="'300px'">
+    field="value" delay="150" styleClass="asset-search-input" [size]="20" [minLength]="0" [autoHighlight]="false" placeholder="Search.." (onSelect)="filterAssetOverviewBySearchSettings($event)" (onClear)="resetSearchSettings()" (onKeyUp)="searchWithSearchString(this.searchKey)" [scrollHeight]="'250px'">
     <ng-template let-suggestion pTemplate="SearchItem">
       <div class="suggestion-wrapper">
         <span class="suggestion-type">{{suggestion.type == 'EXCHANGE' ? 'Exchange' : suggestion.type == 'ASSET_PAIR' ? 'Asset Pair' : 'Asset'}}:</span>

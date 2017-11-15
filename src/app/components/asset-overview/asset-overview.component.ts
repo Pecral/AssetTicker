@@ -144,6 +144,7 @@ export class AssetOverviewComponent implements OnInit {
       return prioritizedAssets[0];
    }
 
+   /** Research search so that all exchange asset pairs will be displayed */
    resetSearchSettings() {
       this.filteredExchangeAssetPairs = this.exchangeAssetPairs;
       this.filteredAssets = this.availableAssets;
@@ -160,19 +161,16 @@ export class AssetOverviewComponent implements OnInit {
       }
    }
 
-   /** Filter the exchange-asset-pairs with a specific search key. In the end we will use the first search-item which fits the string. */
+   /** Filter the exchange-asset-pairs with a specific search key. */
    searchWithSearchString(searchKey: string) {
-      //first filter the search items
-      this.filterSearchItems(searchKey);
-      
-      if(this.filteredSearchItems.length > 0) {
-         this.filterAssetOverviewBySearchSettings(this.filteredSearchItems[0]);
-      }
+      let searchItem = new SearchItem("CUSTOM", searchKey);
+      this.filterAssetOverviewBySearchSettings(searchItem);
    }
 
    /** Filter the asset overview with a search item. */
    filterAssetOverviewBySearchSettings(searchItem: SearchItem) {
       this.currentSearchItem = searchItem;
+      searchItem.value = searchItem.value.toLowerCase();
 
       switch(searchItem.type) {
          case 'EXCHANGE':
@@ -186,6 +184,20 @@ export class AssetOverviewComponent implements OnInit {
          case 'ASSET':
             this.filteredExchangeAssetPairs = this.exchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode.toLowerCase() == searchItem.value.toLowerCase());
          break;
+
+         case 'CUSTOM': {
+            this.filteredExchangeAssetPairs = this.exchangeAssetPairs.filter(eas => {
+               //if exchange fits key, return true
+               if(eas.exchange.toLowerCase().indexOf(searchItem.value) != -1) return true;
+
+               //if asset pair symbol fits key, return ture
+               if(eas.pair.symbol.toLowerCase().indexOf(searchItem.value) != -1) return true;
+
+               return false;
+            });
+         }
+         break;
+
       }
 
       //filter assets if it doesn't contain any exchange-asset-pair that fits the current search

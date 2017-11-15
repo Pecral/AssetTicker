@@ -53,7 +53,6 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    @ViewChild('chartWrapper')
    chartWrapper: ElementRef;
 
-
    chartType: string = 'candles'; //TODO: Extract from settings
 
    priceChangeState: PriceChangeState;
@@ -254,11 +253,8 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       this.y = d3.scaleLinear();
       this.candlestick = techan.plot.candlestick().xScale(this.x).yScale(this.y);
 
-      console.log('initializeCandlesChart start..');
-
       //continue only if the chart-wrapper is rendered to prevent timing issues
       if (this.chartWrapper) {
-         console.log('initializeCandlesChart found wrapper..');
          let selection = d3.select(this.chartWrapper.nativeElement);
 
          let svg = selection.append('svg');
@@ -325,8 +321,6 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    updateCandleStickValues(selection: any): void {
-      console.log(`updateCandleStickValues ${this.exchangeAssetPair.pair.symbol} - last candle ${JSON.stringify(this.candles[95])}`);
-
       let svg = selection.select("svg");
 
       //limit to 24*4 candle-sticks (24h * 15 minute candles)
