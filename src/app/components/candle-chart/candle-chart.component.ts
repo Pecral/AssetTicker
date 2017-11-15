@@ -673,11 +673,11 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
          let highestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.high > maxValue.high ? current : maxValue), visibleCandles[0]);
          let lowestCandle: CandleStick = visibleCandles.reduce<CandleStick>((maxValue, current) => (current.low < maxValue.low ? current : maxValue), visibleCandles[0]);
 
-         if (!this.highlightMaximumPriceText) {
+         if (!this.highlightMaximumPriceText || this.highlightMaximumPriceText.empty()) {
             this.highlightMaximumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price maximum-price");
          }
 
-         if (!this.highlightMinimumPriceText) {
+         if (!this.highlightMinimumPriceText || this.highlightMinimumPriceText.empty()) {
             this.highlightMinimumPriceText = this.svg.select(".candlestick .data").append("text").attr("class", "peak-price minimum-price");
          }
 
