@@ -56,13 +56,17 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
 
    /** The candles subscription is saved globally so that we can unsubscribe from it once this component gets destroyed */
    private candlesSubscription: Subscription;
+   private candlesSnapshotSubscription: Subscription;
 
    private readonly chartTimeframe: string = '15m';
-
    private candles: CandleStick[] = [];
 
    /** The ticker subscription is saved globally so that we can unsubscribe from it once this component gets destroyed */
    private tickerSubscription: Subscription;
+
+   /** Saves the asset pair and exchange to which we're currently subscribed */
+   private subscribedAssetPair: string;
+   private subscribedExchange: string;
 
    //#region D3-Properties
    x: any;
@@ -101,6 +105,7 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    ngOnChanges(): void {
+      this.updateSettings();
       if (this.triggerChartInitialization) {
          this.initializeChart();
       }
@@ -114,16 +119,43 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
 
    /** Unsubscribe from subscriptions */
    private unsubscribe(): void {
-      if (this.candlesSubscription) {
-         this.candlesSubscription.unsubscribe();
-      }
+      this.unsubscribeCandles();
+      this.unsubscribeTicker();
+   }
+
+   /** Unsubscribe from ticker */
+   private unsubscribeTicker() {
       if (this.tickerSubscription) {
          this.tickerSubscription.unsubscribe();
       }
    }
 
+   /** Unsubscribe from candle subscriptions */
+   private unsubscribeCandles():void {
+      if(this.candlesSnapshotSubscription) {
+         this.candlesSnapshotSubscription.unsubscribe();
+      }
+      if (this.candlesSubscription) {
+         this.candlesSubscription.unsubscribe();
+      }
+   }
+
+   /** checks whether we're subscribed to the same asset pair as the input value and updates our subscriptions if necessary */
+   private updateSettings():void {
+      //subscribe only if the settings have changed
+      if(this.exchangeAssetPair && !this.isSubscribedToCurrentSettings()) {
+         this.subscribeToTicker();
+         this.subscribeToCandles();
+
+         this.subscribedAssetPair = this.exchangeAssetPair.pair.symbol;
+         this.subscribedExchange = this.exchangeAssetPair.exchange;         
+      }
+   }
+
    /** Subscribe to the traded pair's ticker */
    private subscribeToTicker() {
+      this.unsubscribeTicker();
+
       let exchange = this.exchangeHandler.getExchangeTicker(ExchangeTickerType[this.exchangeAssetPair.exchange]);
       //subscribe for ticker
       this.tickerSubscription = exchange.subscribeToTickerMessages(this.exchangeAssetPair.pair.symbol).subscribe(tickerMessage => {
@@ -156,19 +188,22 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       });
    }
 
+   /** Checks whether we're subscribed to the same asset pair as the input value  */
+   private isSubscribedToCurrentSettings():boolean {
+      return !(this.subscribedAssetPair != this.exchangeAssetPair.pair.symbol || this.subscribedExchange != this.exchangeAssetPair.exchange);
+   };
+
    private subscribeToCandles(): void {
       //Subscribe for the primary pair's hourly candles so that the 24h chart can be drawn
       let exchange = this.exchangeHandler.getExchangeTicker(ExchangeTickerType[this.exchangeAssetPair.exchange]);
 
-      exchange.getCandlesSnapshot(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).filter(snapshot => snapshot != null).subscribe(snapshot => {
+      this.unsubscribeCandles();
+
+      this.candlesSnapshotSubscription = exchange.getCandlesSnapshot(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).filter(snapshot => snapshot != null).subscribe(snapshot => {
          //save snapshot
          this.candles = snapshot.slice();
 
          this.triggerChartRedraw();
-
-         if (this.candlesSubscription) {
-            this.candlesSubscription.unsubscribe();
-         }
 
          //subscribe for new candles
          this.candlesSubscription = exchange.subscribeToCandles(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).filter(candle => candle !== null).subscribe(candle => {
@@ -181,6 +216,8 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
             else {
                this.candles.push(candle);
             }
+
+            this.triggerChartRedraw();
          });
       });
    }
@@ -214,9 +251,11 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       this.candlestick = techan.plot.candlestick().xScale(this.x).yScale(this.y);
 
       let chartWrapper = document.getElementById(`overview-chart-${this.exchangeAssetPair.pair.symbol}`);
+      console.log('initializeCandlesChart start..');
 
       //continue only if the chart-wrapper is rendered to prevent timing issues
       if (chartWrapper) {
+         console.log('initializeCandlesChart found wrapper..');
          let selection = d3.select(`#overview-chart-${this.exchangeAssetPair.pair.symbol}`);
 
          let svg = selection.append('svg');
@@ -285,6 +324,8 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    updateCandleStickValues(selection: any): void {
+      console.log(`updateCandleStickValues ${this.exchangeAssetPair.pair.symbol} - last candle ${JSON.stringify(this.candles[95])}`);
+
       let svg = selection.select("svg");
 
       //limit to 24*4 candle-sticks (24h * 15 minute candles)

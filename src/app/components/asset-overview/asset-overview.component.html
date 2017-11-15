@@ -1,6 +1,6 @@
 <nav class="menu-navbar">
   <p-autoComplete [(ngModel)]="searchKey" class="asset-search-input" [suggestions]="filteredSearchItems" (completeMethod)="filterSearchItems($event.query)"
-    field="value" delay="150" styleClass="asset-search-input" [size]="30" [autoHighlight]="true" placeholder="Search.." (onSelect)="filterAssetOverviewBySearchSettings($event)" (onClear)="resetSearchSettings()" [scrollHeight]="'300px'">
+    field="value" delay="150" styleClass="asset-search-input" [size]="30" [minLength]="0" [autoHighlight]="true" placeholder="Search.." (onSelect)="filterAssetOverviewBySearchSettings($event)" (onClear)="resetSearchSettings()" [scrollHeight]="'300px'">
     <ng-template let-suggestion pTemplate="SearchItem">
       <div class="suggestion-wrapper">
         <span class="suggestion-type">{{suggestion.type == 'EXCHANGE' ? 'Exchange' : suggestion.type == 'ASSET_PAIR' ? 'Asset Pair' : 'Asset'}}:</span>
@@ -12,7 +12,7 @@
 </nav>
 
 <div class="asset-overview-wrapper">
-  <div id="asset-{{asset.shortcode}}" class="asset-overview" *ngFor="let asset of filteredAssets">
+  <div id="asset-{{asset.shortcode}}" class="asset-overview" *ngFor="let asset of filteredAssets" @fadeAnimation>
     <a [routerLink]="getPrimaryAssetPair(asset).exchange + '/' + getPrimaryAssetPair(asset).pair.symbol + '/15m'">
       <div class="primary-traded-pair exchange-pair-wrapper">
         <exchange-asset-pair class="primary" [exchangeAssetPair]="getPrimaryAssetPair(asset)" [drawHeader]="true" [enableChart]="true"

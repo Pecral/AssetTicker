@@ -10,11 +10,13 @@ import { ExchangeTickerHandlerService } from './../../shared/services/exchange-t
 import { ExchangeTicker } from '../../shared/services/exchange-ticker';
 import { Asset } from '../../shared/models/asset';
 import { ExchangeAssetPair } from '../../shared/models/exchange-asset-pair';
+import { fadeAnimation } from '../../styles/animations/angular/fade';
 
 @Component({
    selector: 'asset-overview',
    templateUrl: './asset-overview.component.html',
    styleUrls: ['./asset-overview.component.scss'],
+   animations: [fadeAnimation],
    encapsulation: ViewEncapsulation.None
 })
 export class AssetOverviewComponent implements OnInit {
@@ -31,12 +33,15 @@ export class AssetOverviewComponent implements OnInit {
     * Key: Asset's shortcode e.g. BTC
     */
    primaryAssetPairs = new Map<string, ExchangeAssetPair>();
+   primaryAssetPairsSearchItem: SearchItem; //here we'll save for which search item the primary exchange asset pairs were calculated
+
 
    private exchangeServices: ExchangeTicker[] = [];
 
    searchItems: SearchItem[] = [];
    filteredSearchItems: any[];
    searchKey: string;
+   currentSearchItem: SearchItem;
 
    constructor(private _exchangeHandler: ExchangeTickerHandlerService, private router: Router, private titleService: Title) {
    }
@@ -108,14 +113,14 @@ export class AssetOverviewComponent implements OnInit {
    /** Returns the primarily traded asset pair for this asset (USD or EUR based)
     */
    getPrimaryAssetPair(asset: Asset): ExchangeAssetPair {
-      if (this.primaryAssetPairs.has(asset.shortcode)) {
+      if ((this.currentSearchItem == null || this.primaryAssetPairsSearchItem == this.currentSearchItem) && this.primaryAssetPairs.has(asset.shortcode)) {
          this.primaryAssetPairs.get(asset.shortcode);
       }
 
       //filter for usd-based pairs --TODO: Priority by settings
       let importantFiat = ['USD', 'EUR'];
 
-      let prioritizedAssets = this.exchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode).sort((assetA, assetB) => {
+      let prioritizedAssets = this.filteredExchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode).sort((assetA, assetB) => {
          let aIsFiat = importantFiat.indexOf(assetA.pair.secondaryAsset.shortcode.toUpperCase()) != -1 ? 1 : -1;
          let bIsFiat = importantFiat.indexOf(assetB.pair.secondaryAsset.shortcode.toUpperCase()) != -1 ? 1 : -1;
 
@@ -131,8 +136,9 @@ export class AssetOverviewComponent implements OnInit {
 
       let priorityPair = prioritizedAssets[0];
       //save only if every asset pair already has received a ticker message
-      if (this.exchangeAssetPairs.every(x => x.latestTicker !== undefined && x.latestTicker !== null)) {
+      if (this.filteredExchangeAssetPairs.every(x => x.latestTicker !== undefined && x.latestTicker !== null)) {
          this.primaryAssetPairs.set(asset.shortcode, prioritizedAssets[0]);
+         this.primaryAssetPairsSearchItem = this.currentSearchItem;
       }
 
       return prioritizedAssets[0];
@@ -141,6 +147,7 @@ export class AssetOverviewComponent implements OnInit {
    resetSearchSettings() {
       this.filteredExchangeAssetPairs = this.exchangeAssetPairs;
       this.filteredAssets = this.availableAssets;
+      this.currentSearchItem = null;
    }
 
    /** Filter search items (asset pairs and exchanges) by search key. */
@@ -165,7 +172,7 @@ export class AssetOverviewComponent implements OnInit {
 
    /** Filter the asset overview with a search item. */
    filterAssetOverviewBySearchSettings(searchItem: SearchItem) {
-      console.log('filter asset overview with search items: ' + JSON.stringify(searchItem));
+      this.currentSearchItem = searchItem;
 
       switch(searchItem.type) {
          case 'EXCHANGE':
