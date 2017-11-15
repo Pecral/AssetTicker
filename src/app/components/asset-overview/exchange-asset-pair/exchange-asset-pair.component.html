@@ -4,7 +4,7 @@
   <span class="pair-price">{{exchangeAssetPair.latestTicker?.lastPrice | currencyValueFormatter: exchangeAssetPair.pair.secondaryAsset.shortcode}}</span>
   <span class="percent-change {{exchangeAssetPair.latestTicker?.dailyChangePercent >= 0 ? 'up' : 'down'}}">{{exchangeAssetPair.latestTicker?.dailyChangePercent.toFixed(2)}}%</span>
 </div>
-<div *ngIf="enableChart" class="candle-chart-wrapper" id="overview-chart-{{this.exchangeAssetPair?.pair.symbol}}">
+<div *ngIf="enableChart" class="candle-chart-wrapper" #chartWrapper id="overview-chart-{{this.exchangeAssetPair?.pair.symbol}}">
 
 </div>
 <div class="simple-body">

@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, OnDestroy, OnChanges, ViewEncapsulation, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, Input, OnDestroy, OnChanges, ViewEncapsulation, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { Subscription } from 'rxjs/Subscription';
 
@@ -49,6 +49,10 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
 
    @Input()
    triggerChartInitialization: boolean;
+
+   @ViewChild('chartWrapper')
+   chartWrapper: ElementRef;
+
 
    chartType: string = 'candles'; //TODO: Extract from settings
 
@@ -229,7 +233,7 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       this.candles = this.candles.slice(this.candles.length - 96);
 
       if (this.chartIsInitialized) {
-         this.drawChart(d3.select(`#overview-chart-${this.exchangeAssetPair.pair.symbol}`));
+         this.drawChart(d3.select(this.chartWrapper.nativeElement));
       }
    }
 
@@ -250,13 +254,12 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       this.y = d3.scaleLinear();
       this.candlestick = techan.plot.candlestick().xScale(this.x).yScale(this.y);
 
-      let chartWrapper = document.getElementById(`overview-chart-${this.exchangeAssetPair.pair.symbol}`);
       console.log('initializeCandlesChart start..');
 
       //continue only if the chart-wrapper is rendered to prevent timing issues
-      if (chartWrapper) {
+      if (this.chartWrapper) {
          console.log('initializeCandlesChart found wrapper..');
-         let selection = d3.select(`#overview-chart-${this.exchangeAssetPair.pair.symbol}`);
+         let selection = d3.select(this.chartWrapper.nativeElement);
 
          let svg = selection.append('svg');
 
@@ -294,8 +297,6 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
 
          this.chartIsInitialized = true;
       }
-
-
    }
 
    private initializeSparklineChart(): void {
