@@ -12,6 +12,8 @@
   
 </head>
 <body>
+   <!-- Unfortunately we have to load d3 separately and save its instance on the window object because techanjs assumes that the instance is saved on it. -->
+   <script src="https://d3js.org/d3.v4.min.js">if (typeof module === "object") { window.d3 = module.exports; }</script>
   <app-root></app-root>
 </body>
 </html>

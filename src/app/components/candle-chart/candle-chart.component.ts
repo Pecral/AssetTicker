@@ -58,7 +58,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
    dim = {
       width: null, height: null,
-      margin: { top: 20, right: 70, bottom: 100, left: 60 },
+      margin: { top: 20, right: 70, bottom: 120, left: 60 },
       plot: { width: null, height: null },
       ohlc: { height: null },
       indicator: { height: null, padding: null, top: null, bottom: null }
@@ -312,14 +312,14 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
       ohlcSelection.append("g")
          .attr("class", "y axis")
-         .attr("transform", "translate(" + this.x(1) + ",0)")
+         .attr("transform", "translate(" + this.x(1) + ",0)");
          //legend for y-axis
-         .append("text")
-         .attr("transform", "rotate(-90)")
-         .attr("y", -12)
-         .attr("dy", ".71em")
-         .style("text-anchor", "end")
-         .text("Price");
+         // .append("text")
+         // .attr("transform", "rotate(-90)")
+         // .attr("y", -12)
+         // .attr("dy", ".71em")
+         // .style("text-anchor", "end")
+         // .text("Price");
 
       ohlcSelection.append("g")
          .attr("class", "closeValue annotation up");

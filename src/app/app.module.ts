@@ -4,6 +4,7 @@ import { HttpModule } from '@angular/http';
 import { FormsModule } from '@angular/forms';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { Routes, RouterModule } from '@angular/router';
+// import { APP_BASE_HREF, LocationStrategy, HashLocationStrategy } from '@angular/common';
 
 /** Services */
 import { GdaxExchangeService } from './shared/services/gdax/gdax-exchange.service';
@@ -24,7 +25,6 @@ import { OrderBookComponent } from './components/order-book/order-book.component
 /** Modules */
 import { AutoCompleteModule, DropdownModule } from 'primeng/primeng';
 import { PerfectScrollbarModule, PerfectScrollbarConfigInterface } from 'ngx-perfect-scrollbar';
-import { NgxAutoScroll } from 'ngx-auto-scroll/lib/ngx-auto-scroll.directive';
 import { CurrencyValueFormatterPipe } from './shared/pipes/currency-value-formatter.pipe';
 
 const PERFECT_SCROLLBAR_CONFIG: PerfectScrollbarConfigInterface = {
@@ -49,7 +49,6 @@ const appRoutes: Routes = [
       TradeOverviewComponent,
       CandleChartComponent,
 
-      NgxAutoScroll,
       CurrencyValueFormatterPipe
    ],
    imports: [
