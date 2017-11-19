@@ -10,8 +10,10 @@ import { ExchangeTicker } from '../../shared/services/exchange-ticker';
 import { Selection, BaseType, ArrayLike, ValueFn } from 'd3-selection';
 import { D3Service, D3, Axis, DSVParsedArray } from 'd3-ng2-service';
 
-import * as d3 from 'd3';
-import { event as currentEvent } from 'd3-selection';
+// import * as d3 from 'd3';
+// import { event as currentEvent } from 'd3-selection';
+//don't use the npm-instance of d3, but the instance of the d3-file which was imported in index.html..
+declare var d3: any;
 import * as techan from 'techan';
 
 @Component({

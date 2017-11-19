@@ -6,7 +6,7 @@ import { BitfinexCandlesSubscription } from './channels/bitfinex-candles-subscri
 import { OrderBookMessage } from './../../models/order-book-message';
 import { OrderBook } from './../../models/order-book';
 import { BitfinexOrderBookSubscription } from './channels/bitfinex-orderbook-subscription';
-import { AssetHandlerService } from './../asset-handler/asset-handler.service';
+import { AssetHandlerService } from './../helper/asset-handler.service';
 import { Injectable, OnInit, EventEmitter, OnDestroy } from '@angular/core';
 import { Http, Response, Headers, RequestOptions, HttpModule, URLSearchParams } from '@angular/http';
 

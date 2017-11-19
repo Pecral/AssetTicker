@@ -60,13 +60,13 @@ export class AssetOverviewComponent implements OnInit {
          exchange.websocketIsConnected.filter(isConnected => isConnected).subscribe(isConnected => {
             exchange.getAvailableAssetPairs().subscribe(pairs => {
                for (let pair of pairs) {
-                  //if(pair.symbol.startsWith("BTCUSD")) {
+                  // if(pair.symbol.startsWith("BTCUSD")) {
                   let exchangeAssetPair = new ExchangeAssetPair();
                   exchangeAssetPair.exchange = ExchangeTickerType[exchange.exchangeType];
                   exchangeAssetPair.pair = pair;
 
                   this.exchangeAssetPairs.push(exchangeAssetPair);
-                  //}
+                  // }
                }
 
                // this.availableAssets = this.availableAssets.concat(pairs.filter(x => x.primaryAsset.shortcode.toUpperCase() == 'BTC').map(x => x.primaryAsset));

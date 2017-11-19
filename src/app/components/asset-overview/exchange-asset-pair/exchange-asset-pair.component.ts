@@ -10,7 +10,8 @@ import { ExchangeTickerType } from './../../../shared/models/exchange-ticker-typ
 import { ExchangeTickerHandlerService } from './../../../shared/services/exchange-ticker-handler.service';
 import { ExchangeAssetPair, PriceChangeState } from './../../../shared/models/exchange-asset-pair';
 
-import * as d3 from 'd3';
+// import * as d3 from 'd3';
+declare var d3: any;
 import * as techan from 'techan';
 
 @Component({
@@ -97,10 +98,6 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
 
    ngOnInit() {
       this.subscribeToTicker();
-
-      if (this.triggerChartInitialization) {
-         this.initializeChart();
-      }
    }
 
    ngOnDestroy(): void {
@@ -108,16 +105,11 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    ngOnChanges(): void {
-      this.updateSettings();
-      if (this.triggerChartInitialization) {
-         this.initializeChart();
-      }
+
    }
 
    ngAfterViewInit() {
-      if (this.triggerChartInitialization) {
-         this.initializeChart();
-      }
+      this.updateSettings();
    }
 
    /** Unsubscribe from subscriptions */
@@ -148,7 +140,11 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       //subscribe only if the settings have changed
       if(this.exchangeAssetPair && !this.isSubscribedToCurrentSettings()) {
          this.subscribeToTicker();
-         this.subscribeToCandles();
+
+         if(this.enableChart && this.triggerChartInitialization){
+            this.subscribeToCandles();
+            this.initializeChart();
+         }
 
          this.subscribedAssetPair = this.exchangeAssetPair.pair.symbol;
          this.subscribedExchange = this.exchangeAssetPair.exchange;         
@@ -237,8 +233,6 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    private initializeChart(): void {
-      this.subscribeToCandles();
-
       if (!this.chartIsInitialized) {
          switch (this.chartType) {
             case 'candles':
@@ -350,32 +344,40 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    resizeCandleStickChart(selection): void {
-      if (selection.node()) {
-         this.dim.width = selection.node().clientWidth - this.dim.margin.left - this.dim.margin.right;
-         this.dim.height = selection.node().clientHeight;
+      let selectionNode = selection.node();
+      if (selectionNode) {
 
-         let svgWrapper = document.querySelector('.svg-wrapper');
+         let newWidth = selectionNode.clientWidth - this.dim.margin.left - this.dim.margin.right;
+         let newHeight = selectionNode.clientHeight
 
-         this.dim.plot.width = this.dim.width;
-         this.dim.plot.height = this.dim.height - this.dim.margin.top - this.dim.margin.bottom;
-         this.dim.ohlc.height = this.dim.plot.height;
-
-         var xRange = [0, this.dim.plot.width],
-            yRange = [this.dim.ohlc.height, 0],
-            ohlcVerticalTicks = Math.min(10, Math.round(this.dim.height / 70)),
-            xTicks = Math.min(10, Math.round(this.dim.width / 130));
-
-
-         this.x.range(xRange);
-         this.y.range(yRange);
-
-         selection.select("svg")
-            .attr("width", this.dim.width)
-            .attr("height", this.dim.height);
-
-         selection.selectAll("defs #ohlcClip > rect")
-            .attr("width", this.dim.plot.width)
-            .attr("height", this.dim.ohlc.height);
+         //only continue if any size is left
+         if(newWidth > 10 && newHeight > 10) {
+            this.dim.width = newWidth;
+            this.dim.height = newHeight;
+   
+            let svgWrapper = document.querySelector('.svg-wrapper');
+   
+            this.dim.plot.width = this.dim.width;
+            this.dim.plot.height = this.dim.height - this.dim.margin.top - this.dim.margin.bottom;
+            this.dim.ohlc.height = this.dim.plot.height;
+   
+            var xRange = [0, this.dim.plot.width],
+               yRange = [this.dim.ohlc.height, 0],
+               ohlcVerticalTicks = Math.min(10, Math.round(this.dim.height / 70)),
+               xTicks = Math.min(10, Math.round(this.dim.width / 130));
+   
+   
+            this.x.range(xRange);
+            this.y.range(yRange);
+   
+            selection.select("svg")
+               .attr("width", this.dim.width)
+               .attr("height", this.dim.height);
+   
+            selection.selectAll("defs #ohlcClip > rect")
+               .attr("width", this.dim.plot.width)
+               .attr("height", this.dim.ohlc.height);
+         }
       }
 
    }

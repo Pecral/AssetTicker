@@ -8,7 +8,7 @@ import { Routes, RouterModule } from '@angular/router';
 
 /** Services */
 import { GdaxExchangeService } from './shared/services/gdax/gdax-exchange.service';
-import { AssetHandlerService } from './shared/services/asset-handler/asset-handler.service';
+import { AssetHandlerService } from './shared/services/helper/asset-handler.service';
 import { ExchangeTickerHandlerService } from './shared/services/exchange-ticker-handler.service';
 import { BitfinexTickerService } from './shared/services/bitfinex/bitfinex-ticker.service';
 import { D3Service } from 'd3-ng2-service';
@@ -67,7 +67,7 @@ const appRoutes: Routes = [
       Title,
       ExchangeTickerHandlerService,
       BitfinexTickerService,
-      //GdaxExchangeService,
+      GdaxExchangeService,
       D3Service,
 
       AssetHandlerService,
