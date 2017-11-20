@@ -57,6 +57,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
    //#region D3/Techan settings
    private parentNativeElement: any;
    private svg: any; //probably Selection<SVGSVGElement, any, null, undefined>;  
+   private svgWrapper: any;
 
    dim = {
       width: null, height: null,
@@ -118,9 +119,12 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
    private highlightMaximumPriceText: any;
    private highlightMinimumPriceText: any;
 
+   private resizeTimer: any;
+   private eventTriggerResize: any;
+
    //data properties
    //private macdData: any;
-   private rsiData: any;
+   //private rsiData: any;
 
    candleLimit: number = 20000; //limit number of candles that should be displayed
 
@@ -155,6 +159,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
    ngOnDestroy(): void {
       this.unsubscribe();
+      window.removeEventListener('resize', this.eventTriggerResize);
    }
 
    ngOnChanges(changes: SimpleChanges): void {
@@ -232,6 +237,7 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
       this.highlightPeakCandles();
    }
 
+   /** Initialize candlestick chart on init */
    ngOnInit(): void {
       this.x = techan.scale.financetime();
       this.y = d3.scaleLinear();
@@ -281,6 +287,8 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
       var svg = selection.append("svg"),
          defs = svg.append("defs");
+
+      this.svgWrapper = selection;
 
       this.svg = svg;
 
@@ -419,24 +427,11 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
       this.updateValues();
       selection.call(this.draw.bind(this));
 
-      let resizeTimer;
-      let interval = Math.floor(1000 / 60 * 10);
       let localParentElement = this.parentNativeElement;
 
-      //keep scope of functions with bound this-context
-      let resizeFunction = this.resize.bind(this);
-      let drawFunction = this.draw.bind(this);
+      this.eventTriggerResize = this.triggerResize.bind(this);
 
-      window.addEventListener('resize', event => {
-         //cancel resize if we're still resizing
-         if (resizeTimer !== false) {
-            clearTimeout(resizeTimer);
-         }
-         resizeTimer = setTimeout(function () {
-
-            selection.call(resizeFunction).call(drawFunction);
-         }, interval);
-      });
+      window.addEventListener('resize', this.eventTriggerResize);
 
       if (this.candles.length > 0) {
          this.loadCandleSticks();
@@ -445,77 +440,96 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
       this.chartIsInitialized = true;
    }
 
+   /** Restarts the timer which calls our resize-function in a specific time-frame */
+   triggerResize(event) {
+      //cancel resize if we're still resizing
+      if (this.resizeTimer !== false) {
+         clearTimeout(this.resizeTimer);
+      }
+      let drawFunction = this.draw.bind(this);
+      let resizeFunction = this.resize.bind(this);
+
+      this.resizeTimer = setTimeout(function () {
+         drawFunction(d3.select('#bigChart'));
+         resizeFunction(d3.select('#bigChart'));
+      }, Math.floor(1000 / 60 * 10));
+   }
+
+   /** Resize the candle-chart */
    resize() {
-      let selection = d3.select('#bigChart');
+      let selection = this.svgWrapper;
+      let selectionNode = selection.node();
       let dim = this.dim;
 
-      dim.width = selection.node().clientWidth;
-      dim.height = selection.node().clientHeight;
-
-      let svgWrapper = document.querySelector('.svg-wrapper');
-
-      dim.plot.width = dim.width - dim.margin.left - dim.margin.right;
-      dim.plot.height = dim.height - dim.margin.top - dim.margin.bottom;
-      dim.ohlc.height = dim.plot.height * 0.833333333;
-      dim.indicator.height = dim.plot.height * 0.144444;
-      dim.indicator.padding = dim.plot.height * 0.01111111111;
-      dim.indicator.top = dim.ohlc.height + dim.indicator.padding;
-      dim.indicator.bottom = dim.indicator.top + dim.indicator.height + dim.indicator.padding;
-
-      var xRange = [0, dim.plot.width],
-         yRange = [dim.ohlc.height, 0],
-         ohlcVerticalTicks = Math.min(10, Math.round(dim.height / 70)),
-         xTicks = Math.min(10, Math.round(dim.width / 130));
-
-      this.indicatorTop.range([dim.indicator.top, dim.indicator.bottom]);
-      this.x.range(xRange);
-      this.xAxis.ticks(xTicks);
-      this.y.range(yRange);
-      this.yAxis.ticks(ohlcVerticalTicks);
-      this.yPercent.range(this.y.range());
-      this.percentAxis.ticks(ohlcVerticalTicks);
-
-      this.timeAnnotation.translate([0, dim.plot.height]);
-      this.ohlcAnnotation.translate([xRange[1], 0]);
-      this.closeAnnotation.translate([xRange[1], 0]);
-      this.ohlcCrosshair.verticalWireRange([0, dim.plot.height]);
-
-      let indicatorTop = this.indicatorTop;
-
-      this.volumeScale.range([indicatorTop(0) + dim.indicator.height, indicatorTop(0)]);
-      this.rsiScale.range([indicatorTop(1) + dim.indicator.height, indicatorTop(1)]);
-      this.volumeAnnotationRight.translate([xRange[1], 0]);
-      this.rsiAnnotation.translate([xRange[1], 0]);
-      this.volumeCrosshair.verticalWireRange([0, dim.plot.height]);
-      this.rsiCrosshair.verticalWireRange([0, dim.plot.height]);
-
-      selection.select("svg")
-         .attr("width", dim.width)
-         .attr("height", dim.height);
-
-      selection.selectAll("defs #ohlcClip > rect")
-         .attr("width", dim.plot.width)
-         .attr("height", dim.ohlc.height);
-
-      selection.selectAll("defs .indicatorClip > rect")
-         .attr("y", (d, i) => { return indicatorTop(i); })
-         .attr("width", dim.plot.width)
-         .attr("height", dim.indicator.height);
-
-      selection.select("g.x.axis.bottom")
-         .attr("transform", "translate(0," + dim.plot.height + ")");
-
-      selection.select("g.ohlc g.y.axis")
-         .attr("transform", "translate(" + xRange[1] + ",0)");
-
-      selection.select("g.volume g.axis.right")
-         .attr("transform", "translate(" + xRange[1] + ",0)");
-
-      selection.select("g.volume g.axis.left")
-         .attr("transform", "translate(" + xRange[0] + ",0)");
-
-      //update peak hightlighting elements
-      this.highlightPeakCandles();
+      if(selectionNode) {
+         dim.width = selectionNode.clientWidth;
+         dim.height = selectionNode.clientHeight;
+   
+         let svgWrapper = document.querySelector('.svg-wrapper');
+   
+         dim.plot.width = dim.width - dim.margin.left - dim.margin.right;
+         dim.plot.height = dim.height - dim.margin.top - dim.margin.bottom;
+         dim.ohlc.height = dim.plot.height * 0.833333333;
+         dim.indicator.height = dim.plot.height * 0.144444;
+         dim.indicator.padding = dim.plot.height * 0.01111111111;
+         dim.indicator.top = dim.ohlc.height + dim.indicator.padding;
+         dim.indicator.bottom = dim.indicator.top + dim.indicator.height + dim.indicator.padding;
+   
+         var xRange = [0, dim.plot.width],
+            yRange = [dim.ohlc.height, 0],
+            ohlcVerticalTicks = Math.min(10, Math.round(dim.height / 70)),
+            xTicks = Math.min(10, Math.round(dim.width / 130));
+   
+         this.indicatorTop.range([dim.indicator.top, dim.indicator.bottom]);
+         this.x.range(xRange);
+         this.xAxis.ticks(xTicks);
+         this.y.range(yRange);
+         this.yAxis.ticks(ohlcVerticalTicks);
+         this.yPercent.range(this.y.range());
+         this.percentAxis.ticks(ohlcVerticalTicks);
+   
+         this.timeAnnotation.translate([0, dim.plot.height]);
+         this.ohlcAnnotation.translate([xRange[1], 0]);
+         this.closeAnnotation.translate([xRange[1], 0]);
+         this.ohlcCrosshair.verticalWireRange([0, dim.plot.height]);
+   
+         let indicatorTop = this.indicatorTop;
+   
+         this.volumeScale.range([indicatorTop(0) + dim.indicator.height, indicatorTop(0)]);
+         this.rsiScale.range([indicatorTop(1) + dim.indicator.height, indicatorTop(1)]);
+         this.volumeAnnotationRight.translate([xRange[1], 0]);
+         this.rsiAnnotation.translate([xRange[1], 0]);
+         this.volumeCrosshair.verticalWireRange([0, dim.plot.height]);
+         this.rsiCrosshair.verticalWireRange([0, dim.plot.height]);
+   
+         selection.select("svg")
+            .attr("width", dim.width)
+            .attr("height", dim.height);
+   
+         selection.selectAll("defs #ohlcClip > rect")
+            .attr("width", dim.plot.width)
+            .attr("height", dim.ohlc.height);
+   
+         selection.selectAll("defs .indicatorClip > rect")
+            .attr("y", (d, i) => { return indicatorTop(i); })
+            .attr("width", dim.plot.width)
+            .attr("height", dim.indicator.height);
+   
+         selection.select("g.x.axis.bottom")
+            .attr("transform", "translate(0," + dim.plot.height + ")");
+   
+         selection.select("g.ohlc g.y.axis")
+            .attr("transform", "translate(" + xRange[1] + ",0)");
+   
+         selection.select("g.volume g.axis.right")
+            .attr("transform", "translate(" + xRange[1] + ",0)");
+   
+         selection.select("g.volume g.axis.left")
+            .attr("transform", "translate(" + xRange[0] + ",0)");
+   
+         //update peak hightlighting elements
+         this.highlightPeakCandles();
+      }
    }
 
    updateValues(): void {
@@ -546,8 +560,8 @@ export class CandleChartComponent implements OnInit, OnDestroy, OnChanges {
 
       //this.macdData = techan.indicator.macd()(this.candles);
       this.volumeScale.domain(techan.scale.plot.volume(this.candles).domain());
-      this.rsiData = techan.indicator.rsi()(this.candles);
-      this.rsiScale.domain(techan.scale.plot.rsi(this.rsiData).domain());
+      // this.rsiData = techan.indicator.rsi()(this.candles);
+      // this.rsiScale.domain(techan.scale.plot.rsi(this.rsiData).domain());
 
       this.resize();
 
