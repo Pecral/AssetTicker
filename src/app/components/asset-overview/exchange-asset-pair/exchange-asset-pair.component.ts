@@ -25,14 +25,20 @@ import * as techan from 'techan';
                backgroundColor: '#631919',
                color: '#ff7f7f'
             }),
-            animate('1500ms linear')
+            animate('1000ms linear', style({
+               backgroundColor: '#631919',
+               color: '#ff7f7f'
+            }))
          ]),
          transition(`${PriceChangeState.Neutral} => ${PriceChangeState.Rising}`, [
             style({
                backgroundColor: '#044404',
                color: '#48dc48'
             }),
-            animate('1500ms linear')
+            animate('1000ms linear', style({
+               backgroundColor: '#044404',
+               color: '#48dc48'
+            }))
          ])
       ])
    ],
