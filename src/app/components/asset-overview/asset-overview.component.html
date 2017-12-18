@@ -16,7 +16,7 @@
     <a [routerLink]="getPrimaryAssetPair(asset).exchange + '/' + getPrimaryAssetPair(asset).pair.symbol + '/15m'">
       <div class="primary-traded-pair exchange-pair-wrapper">
         <exchange-asset-pair class="primary" [exchangeAssetPair]="getPrimaryAssetPair(asset)" [drawHeader]="true" [enableChart]="true"
-          [triggerChartInitialization]="true"> </exchange-asset-pair>
+          [triggerChartInitialization]="this.primaryAssetPairs.has(asset)"> </exchange-asset-pair>
       </div>
     </a>
     <div class="exchange-asset-pairs">

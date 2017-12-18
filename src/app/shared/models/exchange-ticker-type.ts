@@ -1,4 +1,5 @@
 export enum ExchangeTickerType {
     Bitfinex,
-    GDAX
+    GDAX,
+    Poloniex
 }

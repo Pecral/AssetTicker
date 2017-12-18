@@ -26,6 +26,7 @@ import { OrderBookComponent } from './components/order-book/order-book.component
 import { AutoCompleteModule, DropdownModule } from 'primeng/primeng';
 import { PerfectScrollbarModule, PerfectScrollbarConfigInterface } from 'ngx-perfect-scrollbar';
 import { CurrencyValueFormatterPipe } from './shared/pipes/currency-value-formatter.pipe';
+import { PoloniexExchangeService } from './shared/services/poloniex/poloniex-echange.service';
 
 const PERFECT_SCROLLBAR_CONFIG: PerfectScrollbarConfigInterface = {
    suppressScrollX: true
@@ -68,6 +69,7 @@ const appRoutes: Routes = [
       ExchangeTickerHandlerService,
       BitfinexTickerService,
       GdaxExchangeService,
+      PoloniexExchangeService,
       D3Service,
 
       AssetHandlerService,
