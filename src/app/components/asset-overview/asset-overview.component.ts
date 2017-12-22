@@ -136,7 +136,7 @@ export class AssetOverviewComponent implements OnInit {
 
       let priorityPair = prioritizedAssets[0];
       //save only if every asset pair already has received a ticker message
-      if (this.filteredExchangeAssetPairs.every(x => x.latestTicker !== undefined && x.latestTicker !== null)) {
+      if (this.getExchangeAssetPairs(asset, false).every(x => x.latestTicker !== undefined && x.latestTicker !== null)) {
          this.primaryAssetPairs.set(asset.shortcode, prioritizedAssets[0]);
          this.primaryAssetPairsSearchItem = this.currentSearchItem;
       }

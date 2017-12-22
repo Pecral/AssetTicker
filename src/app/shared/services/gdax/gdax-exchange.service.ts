@@ -17,6 +17,7 @@ import { GdaxCandlesSubscription } from './channels/gdax-candles-subscription';
 import { GdaxTickerSubscription } from './channels/gdax-ticker-subscription';
 import { timeFormat } from 'd3-ng2-service/src/bundle-d3';
 import { subscribeOn } from 'rxjs/operator/subscribeOn';
+import { ThrottledRequestQueue } from '../../helper/throttled-request-queue/throttled-request-queue';
 
 @Injectable()
 export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
@@ -27,6 +28,8 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
 
    private readonly websocketUrl: string = 'wss://ws-feed.gdax.com';
    private readonly apiUrl: string = 'https://api.gdax.com';
+
+   private apiRequestQueue: ThrottledRequestQueue;
 
    /*
    * List of active subscriptions. Key: Product-ID i.e. BTC-USD
@@ -44,13 +47,16 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    //private queuedSubscriptions: GDAXChannelSubscription[] = [];
 
    constructor(private http: Http) {
-      this.websocket = new WebSocket(this.websocketUrl);
+      //create a new throttled queue which allows 3 api requests per second
+      this.apiRequestQueue = new ThrottledRequestQueue(http, 3, 6);
 
+      this.websocket = new WebSocket(this.websocketUrl);
       this.websocket.onmessage = this.onWebsocketMessageReceived.bind(this);
       this.websocket.onerror = this.onWebsocketError.bind(this);
 
       this.websocket.onopen = () => {
-         //inform everyone that the websocket is opened now
+         //inform everyone that the websocket is opened now -- should be deprecated as soon as we don't have to prevent method-calls when the websocket isn't ready
+         //we want to queue this calls and process them as soon as the websocket is opened (handled in websocket-stash)
          this.websocketIsConnected.next(true);
       }
    }
@@ -62,19 +68,19 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
       // this.subscriptions.forEach(x => {
       //    this.unsubscribeFromChannel(x.channelId);
       // });
-   }   
+   }
 
    private onWebsocketMessageReceived(message: any) {
       console.log(message);
    }
 
    private onChannelMessage(message: any) {
-      switch(message.type) {
+      switch (message.type) {
          case "error":
-            console.error('## GDAX ## Error - ' + message.message);         
-         break;
+            console.error('## GDAX ## Error - ' + message.message);
+            break;
          case "subscriptions":
-         break;
+            break;
 
       }
 
@@ -87,12 +93,12 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    /** Gets called if the websocket sends us a message about our current subscriptions */
    private onSubscriptionsMessage(message: any) {
       //it should have the property 'channels'
-      if(message.channels && message.channels instanceof Array) {
-         for(let channel of message.channels) {
+      if (message.channels && message.channels instanceof Array) {
+         for (let channel of message.channels) {
             //check if any of these subscriptions are fulfilled queued subscriptions
-            switch(channel.name) {
+            switch (channel.name) {
                case "ticker":
-               break;
+                  break;
             }
          }
       }
@@ -106,7 +112,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
 
    /** Print an error to the console if something fails. */
    private onWebsocketError(error: any) {
-      
+
    }
 
    /** Unsubscribe from a specific channel */
@@ -117,7 +123,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
       };
 
       this.websocket.send(JSON.stringify(message));
-   }   
+   }
 
    subscribeToAssetTrades(pair: string): Observable<AssetTrade> {
       throw new Error("Method not implemented.");
@@ -130,19 +136,19 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
     * Returns array of available asset pairs/products on GDAX.
     */
    getAvailableAssetPairs(): Observable<AssetPair[]> {
-      return this.http.get(this.apiUrl + '/products').map(result => {
+      return this.apiRequestQueue.enqueue(this.apiUrl + '/products').map(result => {
          let assetPairs: AssetPair[] = [];
          let resultJson = result.json();
 
          //return empty array if request failed, log error
-         if(result.status != 200 ) {
+         if (result.status != 200) {
             console.log(`## GDAX ## Error - Failed to request '/products'. Status code: ${result.statusText}`);
          }
-         else if(resultJson instanceof Array == false) {
+         else if (resultJson instanceof Array == false) {
             console.log(`## GDAX ## Error - Failed to parse response of '/products' request. The response was not an array.`);
          }
          else {
-            for(let pairJson of resultJson) {
+            for (let pairJson of resultJson) {
                let assetPair = new AssetPair();
 
                let baseAsset = new Asset();
@@ -160,7 +166,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
                assetPairs.push(assetPair);
             }
          }
-         
+
          return assetPairs;
       });
    }
@@ -175,7 +181,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    }
 
    getCandlesSnapshot(pair: string, timeFrame: string): Observable<CandleStick[]> {
-      if(!this.symbolToProductMapping.has(pair)) {
+      if (!this.symbolToProductMapping.has(pair)) {
          console.error(`## GDAX ## Attempted to request candles data for asset pair ${pair} even though we don't have any product id saved for it.`);
          return Observable.empty<CandleStick[]>();
       }
@@ -183,7 +189,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
       return this.ensureCandlesSubscription(this.symbolToProductMapping.get(pair), timeFrame).snapshotSubject;
    }
    subscribeToCandles(pair: string, timeFrame: string): Observable<CandleStick> {
-      if(!this.symbolToProductMapping.has(pair)) {
+      if (!this.symbolToProductMapping.has(pair)) {
          console.error(`## GDAX ## Attempted to request candles data for asset pair ${pair} even though we don't have any product id saved for it.`);
          return Observable.empty<CandleStick>();
       }
@@ -194,31 +200,85 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    private ensureCandlesSubscription(productKey: string, timeFrame: string): GdaxCandlesSubscription {
       let mapKey = productKey + timeFrame;
 
-      if(!this.candleSubscriptions.has(mapKey)) {
+      if (!this.candleSubscriptions.has(mapKey)) {
          let subscription = new GdaxCandlesSubscription(productKey, timeFrame);
          //we receive the candles snapshot over the api, so we don't have to wait for a websocket subscription
          subscription.channelState = ChannelSubscriptionState.Subscribed;
          this.candleSubscriptions.set(mapKey, subscription);
 
          //request historic rates
-         this.http.get(this.apiUrl + subscription.getSnapshotRequestUrl(new Date()))
-                  .map(result => result.json())
-                  .subscribe(snapshot => subscription.resolveSnapshot(snapshot));
+         this.apiRequestQueue.enqueue(this.apiUrl + subscription.getSnapshotRequestUrl(new Date()))
+            .map(result => result.json())
+            .subscribe(snapshot => subscription.resolveSnapshot(snapshot));
 
          //TODO: Subscribe to batched-trades-channel so that we can update our candles
          //Documentation: https://docs.gdax.com/#the-code-classprettyprinttickercode-channel         
       }
-      return this.candleSubscriptions.get(mapKey);    
+      return this.candleSubscriptions.get(mapKey);
    }
-   
+
    unsubscribeFromCandles(pair: string, timeFrame: string): void {
       throw new Error("Method not implemented.");
    }
 
    subscribeToTickerMessages(pair: string): Observable<TickerMessage> {
-      return Observable.empty<TickerMessage>();
+      let productKey = this.symbolToProductMapping.get(pair);
+
+      let subscription: GdaxTickerSubscription;
+
+      if (!this.tickerSubscriptions.has(productKey)) {
+         subscription = new GdaxTickerSubscription();
+         subscription.key = productKey;
+         this.tickerSubscriptions.set(productKey, subscription);
+
+         //in gdax, the ticker message consists of two api requests
+         //request ticker stats
+         var tickerObservable = this.apiRequestQueue.enqueue(this.apiUrl + `/products/${productKey}/ticker`).map(result => result.json());
+
+         //request 24hr stats
+         var statsObservable = this.apiRequestQueue.enqueue(this.apiUrl + `/products/${productKey}/stats`).map(result => result.json());
+
+         Observable.zip(tickerObservable, statsObservable).subscribe(([tickerResult, statsResult]) => {
+            subscription.pushApiResultsIntoSubscription(statsResult, tickerResult);
+         });
+
+         //subscribe to ticker channel
+         let subscribeMessage = {
+            type:"subscribe"
+         }
+      }
+      else {
+         subscription = this.tickerSubscriptions.get(productKey);
+      }
+
+      return subscription.subject;
+      //return Observable.empty<TickerMessage>();
    }
+
    unsubscribeFromTickerMessages(pair: string): void {
       throw new Error("Method not implemented.");
-   }   
+   }
+
+   /** Returns either a subscription message or a unsubscription message */
+   getChannelSubscription(type: ChannelType, productId: string, isUnsubscribe: boolean): string {
+      let message = {
+         "type": isUnsubscribe ? "unsubscribe" : "subscribe",
+         "product_ids": [
+            productId
+         ],
+         "channels": [
+            ChannelType[type].toLowerCase()
+         ]
+      }
+
+      return JSON.stringify(message);
+   }
+}
+
+enum ChannelType {
+   Heartbeat,
+   Ticker,
+   Snapshot,
+   L2update,
+   Matches
 }

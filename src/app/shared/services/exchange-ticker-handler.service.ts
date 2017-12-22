@@ -13,7 +13,7 @@ export class ExchangeTickerHandlerService {
 
    constructor(private bitfinexTicker: BitfinexTickerService, private gdaxService: GdaxExchangeService) { 
       this.exchangeServiceMap.set(ExchangeTickerType.Bitfinex, bitfinexTicker);
-      // this.exchangeServiceMap.set(ExchangeTickerType.GDAX, gdaxService);
+      this.exchangeServiceMap.set(ExchangeTickerType.GDAX, gdaxService);
    }
 
    getExchangeTicker(exchange : ExchangeTickerType): ExchangeTicker {

@@ -77,6 +77,7 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    /** Saves the asset pair and exchange to which we're currently subscribed */
    private subscribedAssetPair: string;
    private subscribedExchange: string;
+   private subscribedCandlesSymbol: string;
 
    //#region D3-Properties
    x: any;
@@ -111,7 +112,7 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    ngOnChanges(): void {
-
+      this.updateSettings();
    }
 
    ngAfterViewInit() {
@@ -132,8 +133,8 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    /** Unsubscribe from candle subscriptions */
-   private unsubscribeCandles():void {
-      if(this.candlesSnapshotSubscription) {
+   private unsubscribeCandles(): void {
+      if (this.candlesSnapshotSubscription) {
          this.candlesSnapshotSubscription.unsubscribe();
       }
       if (this.candlesSubscription) {
@@ -142,18 +143,26 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    /** checks whether we're subscribed to the same asset pair as the input value and updates our subscriptions if necessary */
-   private updateSettings():void {
+   private updateSettings(): void {
       //subscribe only if the settings have changed
-      if(this.exchangeAssetPair && !this.isSubscribedToCurrentSettings()) {
-         this.subscribeToTicker();
+      if (this.exchangeAssetPair) {
+         if (!this.isSubscribedToCurrentSettings()) {
+            this.subscribeToTicker();
 
-         if(this.enableChart && this.triggerChartInitialization){
-            this.subscribeToCandles();
-            this.initializeChart();
+            if (this.enableChart && this.triggerChartInitialization) {
+               this.subscribeToCandles();
+               this.initializeChart();
+            }
+
+            this.subscribedAssetPair = this.exchangeAssetPair.pair.symbol;
+            this.subscribedExchange = this.exchangeAssetPair.exchange;
          }
 
-         this.subscribedAssetPair = this.exchangeAssetPair.pair.symbol;
-         this.subscribedExchange = this.exchangeAssetPair.exchange;         
+         //subscribe to candles if the candles are the only things that have changed
+         if(this.enableChart && this.triggerChartInitialization && this.subscribedCandlesSymbol != this.exchangeAssetPair.pair.symbol) {
+            this.initializeChart();
+            this.subscribeToCandles();
+         }
       }
    }
 
@@ -162,8 +171,10 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       this.unsubscribeTicker();
 
       let exchange = this.exchangeHandler.getExchangeTicker(ExchangeTickerType[this.exchangeAssetPair.exchange]);
+
       //subscribe for ticker
       this.tickerSubscription = exchange.subscribeToTickerMessages(this.exchangeAssetPair.pair.symbol).subscribe(tickerMessage => {
+
          if (this.exchangeAssetPair.latestTicker) {
             let previousPrice = this.exchangeAssetPair.latestTicker.lastPrice;
 
@@ -194,7 +205,7 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
    }
 
    /** Checks whether we're subscribed to the same asset pair as the input value  */
-   private isSubscribedToCurrentSettings():boolean {
+   private isSubscribedToCurrentSettings(): boolean {
       return !(this.subscribedAssetPair != this.exchangeAssetPair.pair.symbol || this.subscribedExchange != this.exchangeAssetPair.exchange);
    };
 
@@ -203,6 +214,8 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
       let exchange = this.exchangeHandler.getExchangeTicker(ExchangeTickerType[this.exchangeAssetPair.exchange]);
 
       this.unsubscribeCandles();
+
+      this.subscribedCandlesSymbol = this.exchangeAssetPair.pair.symbol;
 
       this.candlesSnapshotSubscription = exchange.getCandlesSnapshot(this.exchangeAssetPair.pair.symbol, this.chartTimeframe).filter(snapshot => snapshot != null).subscribe(snapshot => {
          //save snapshot
@@ -357,29 +370,29 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
          let newHeight = selectionNode.clientHeight
 
          //only continue if any size is left
-         if(newWidth > 10 && newHeight > 10) {
+         if (newWidth > 10 && newHeight > 10) {
             this.dim.width = newWidth;
             this.dim.height = newHeight;
-   
+
             let svgWrapper = document.querySelector('.svg-wrapper');
-   
+
             this.dim.plot.width = this.dim.width;
             this.dim.plot.height = this.dim.height - this.dim.margin.top - this.dim.margin.bottom;
             this.dim.ohlc.height = this.dim.plot.height;
-   
+
             var xRange = [0, this.dim.plot.width],
                yRange = [this.dim.ohlc.height, 0],
                ohlcVerticalTicks = Math.min(10, Math.round(this.dim.height / 70)),
                xTicks = Math.min(10, Math.round(this.dim.width / 130));
-   
-   
+
+
             this.x.range(xRange);
             this.y.range(yRange);
-   
+
             selection.select("svg")
                .attr("width", this.dim.width)
                .attr("height", this.dim.height);
-   
+
             selection.selectAll("defs #ohlcClip > rect")
                .attr("width", this.dim.plot.width)
                .attr("height", this.dim.ohlc.height);
