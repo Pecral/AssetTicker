@@ -5,6 +5,8 @@
    display:flex;
    flex-direction: row;
    flex-wrap: wrap;
+   height: calc(100vh - 45px); //full height minus header
+   overflow-y: scroll;
 }
 
 .menu-navbar {
