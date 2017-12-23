@@ -1,7 +1,7 @@
 export class TimeframeResolver {
    static resolveToMinutes(timeframe: string) {
       let regex = /(\d*)(\w)/;
-      let [, timeframeString, period] = regex.exec(timeframe);
+      let [, timeframeString, period] = regex.exec(timeframe); //skip first entry because it's just the full match
       let timeframeNumber = parseInt(timeframeString);
       let minutes: number = 0;
 
@@ -20,6 +20,11 @@ export class TimeframeResolver {
          case 'D':
             minutes = timeframeNumber * 24 * 60;
          break;
+          
+         //weeks
+         case 'W':
+            minutes = timeframeNumber * 7 * 24 * 60;
+         break;          
 
          //months
          case 'M':
