@@ -71,23 +71,46 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    }
 
    private onWebsocketMessageReceived(message: any) {
-      console.log(message);
-   }
+      if (message.data) {
+         let parsedData = JSON.parse(message.data);
 
-   private onChannelMessage(message: any) {
-      switch (message.type) {
-         case "error":
-            console.error('## GDAX ## Error - ' + message.message);
-            break;
-         case "subscriptions":
-            break;
+         if (parsedData.hasOwnProperty('type')) {
+            switch (parsedData.type) {
+               case 'error':
+                  console.log(`## GDAX ## Error - ${parsedData}`);
+                  break;
 
+               case 'subscriptions':
+                  this.onSubscriptionsMessage(parsedData);
+                  break;
+
+               case 'heartbeat':
+                  break;
+
+               case 'ticker':
+                  let subscription = this.tickerSubscriptions.get(parsedData.product_id);
+                  if (subscription) {
+                     subscription.pushIntoSubscription(parsedData);
+                  }
+                  break;
+
+               case 'snapshot':
+                  break;
+
+               case 'l2update':
+                  break;
+
+               case 'match':
+                  break;
+            }
+         } else {
+            console.log(`## GDAX ## Received message contains no type property: ${JSON.stringify(parsedData)}`);
+         }
+      }
+      else {
+         console.debug(`## GDAX ## Received message contains no data property: ${JSON.stringify(message)}`);
       }
 
-      //push message to subscription
-      // if (this.subscriptions.has(channelId)) {
-      //    this.subscriptions.get(channelId).pushIntoSubscription(message);
-      // }
    }
 
    /** Gets called if the websocket sends us a message about our current subscriptions */
@@ -98,6 +121,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
             //check if any of these subscriptions are fulfilled queued subscriptions
             switch (channel.name) {
                case "ticker":
+
                   break;
             }
          }
@@ -243,9 +267,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
          });
 
          //subscribe to ticker channel
-         let subscribeMessage = {
-            type:"subscribe"
-         }
+         this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Ticker, productKey, false));
       }
       else {
          subscription = this.tickerSubscriptions.get(productKey);
@@ -256,11 +278,18 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    }
 
    unsubscribeFromTickerMessages(pair: string): void {
-      throw new Error("Method not implemented.");
+      let productKey = this.symbolToProductMapping.get(pair);
+
+      let subscription: GdaxTickerSubscription = this.tickerSubscriptions.get(productKey);
+
+      if (subscription && subscription.subject.observers.length == 0) {
+         //unsubscribe from ticker channel
+         this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Ticker, productKey, true));
+      }
    }
 
    /** Returns either a subscription message or a unsubscription message */
-   getChannelSubscription(type: ChannelType, productId: string, isUnsubscribe: boolean): string {
+   getChannelSubscriptionMessage(type: ChannelType, productId: string, isUnsubscribe: boolean): string {
       let message = {
          "type": isUnsubscribe ? "unsubscribe" : "subscribe",
          "product_ids": [

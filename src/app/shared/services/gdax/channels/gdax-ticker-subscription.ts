@@ -26,7 +26,26 @@ export class GdaxTickerSubscription implements GdaxChannelSubscription {
    subscriptionType: string = "ticker";
  
    pushIntoSubscription(message: any): void {
+      //if time-property is available, check if it's newer
+      if(message.time ) {
+         let timestamp = new Date(Date.parse(message.time))
+         if(!this.isNewerThanLatestTick(timestamp)) {
+            return;
+         }
+      }
       
+      let tickerMessage = new TickerMessage();
+
+      tickerMessage.lastPrice = parseFloat(message.price);
+      tickerMessage.high = parseFloat(message.high_24h);
+      tickerMessage.low = parseFloat(message.low_24h);
+      tickerMessage.ask = parseFloat(message.best_ask);
+      tickerMessage.bid = parseFloat(message.best_bid);
+      tickerMessage.volume = parseFloat(message.volume_24h);
+      tickerMessage.open = parseFloat(message.open_24h);
+
+      this.calculateDailyChangeStats(tickerMessage);
+      this.subject.next(tickerMessage);
    }
 
    pushApiResultsIntoSubscription(statsResult: any, tickerResult:any) {
