@@ -19,6 +19,7 @@ import { timeFormat } from 'd3-ng2-service/src/bundle-d3';
 import { subscribeOn } from 'rxjs/operator/subscribeOn';
 import { ThrottledRequestQueue } from '../../helper/throttled-request-queue/throttled-request-queue';
 import { GdaxMatchSubscription } from './channels/gdax-match-subscription';
+import { GdaxOrderBookSubscription } from './channels/gdax-orderbook-subscription';
 
 @Injectable()
 export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
@@ -39,6 +40,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    private matchSubscriptions = new Map<string, GdaxTickerSubscription>();
    private tradeSubscriptions = new Map<string, GdaxMatchSubscription>();
    private candleSubscriptions = new Map<string, GdaxCandlesSubscription>();
+   private orderBookSubscriptions = new Map<string, GdaxOrderBookSubscription>();
 
    /** Saves the mapping from asset pair symbols to product keys */
    private symbolToProductMapping = new Map<string, string>();
@@ -97,9 +99,17 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
                   break;
 
                case 'snapshot':
+                  let orderBookSubscription = this.orderBookSubscriptions.get(parsedData.product_id);
+                  if (orderBookSubscription) {
+                     orderBookSubscription.pushSnapshotIntoSubscription(parsedData);
+                  }
                   break;
 
                case 'l2update':
+                  let orderBookSubscriptionUpdate = this.orderBookSubscriptions.get(parsedData.product_id);
+                  if (orderBookSubscriptionUpdate) {
+                     orderBookSubscriptionUpdate.pushL2UpdateIntoSubscription(parsedData);
+                  }
                   break;
 
                case 'match':
@@ -230,13 +240,47 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
       });
    }
    getOrderBook(pair: string): OrderBook {
-      return new OrderBook();
+      if (!this.symbolToProductMapping.has(pair)) {
+         console.error(`## GDAX ## Attempted to request orderbook data for asset pair ${pair} even though we don't have any product id saved for it.`);
+         return new OrderBook();
+      }
+
+      return this.ensureOrderBookSubscription(this.symbolToProductMapping.get(pair)).orderbook;
    }
+
    getOrderBookMessages(pair: string): Observable<OrderBookMessage> {
-      return Observable.empty<OrderBookMessage>();
+      if (!this.symbolToProductMapping.has(pair)) {
+         console.error(`## GDAX ## Attempted to request orderbook data for asset pair ${pair} even though we don't have any product id saved for it.`);
+         return Observable.empty<OrderBookMessage>();
+      }
+
+      return this.ensureOrderBookSubscription(this.symbolToProductMapping.get(pair)).orderbook.orderBookMessage;
    }
+
+   private ensureOrderBookSubscription(productKey: string): GdaxOrderBookSubscription {
+      if (!this.orderBookSubscriptions.has(productKey)) {
+         let subscription = new GdaxOrderBookSubscription();
+         subscription.key = productKey;
+         //we receive the candles snapshot over the api, so we don't have to wait for a websocket subscription
+         subscription.channelState = ChannelSubscriptionState.Subscribed;
+         this.orderBookSubscriptions.set(productKey, subscription);
+
+         //request order book snapshot and updates
+         this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Level2, productKey, false));
+
+         //TODO: Subscribe to batched-trades-channel so that we can update our candles
+         //Documentation: https://docs.gdax.com/#the-code-classprettyprinttickercode-channel         
+      }
+
+      return this.orderBookSubscriptions.get(productKey);
+   }
+
    unsubscribeFromOrderBook(pair: string): void {
-      throw new Error("Method not implemented.");
+      //subscribe from order book channel
+      let productKey = this.symbolToProductMapping.get(pair);
+      if(productKey) {
+         this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Level2, productKey, true));
+      }
    }
 
    getCandlesSnapshot(pair: string, timeFrame: string): Observable<CandleStick[]> {
@@ -342,7 +386,6 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
 enum ChannelType {
    Heartbeat,
    Ticker,
-   Snapshot,
-   L2update,
+   Level2,
    Matches
 }
