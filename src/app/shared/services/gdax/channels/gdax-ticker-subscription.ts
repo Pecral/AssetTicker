@@ -25,7 +25,7 @@ export class GdaxTickerSubscription implements GdaxChannelSubscription {
 
    subscriptionType: string = "ticker";
  
-   pushIntoSubscription(message: any): void {
+   pushIntoSubscription(message: GdaxTicker): void {
       //if time-property is available, check if it's newer
       if(message.time ) {
          let timestamp = new Date(Date.parse(message.time))
@@ -48,7 +48,7 @@ export class GdaxTickerSubscription implements GdaxChannelSubscription {
       this.subject.next(tickerMessage);
    }
 
-   pushApiResultsIntoSubscription(statsResult: any, tickerResult:any) {
+   pushApiResultsIntoSubscription(statsResult: GdaxApiStats, tickerResult:GdaxApiTicker) {
       let timestamp = new Date(Date.parse(tickerResult.time));
 
       if(this.isNewerThanLatestTick(timestamp)) {

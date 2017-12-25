@@ -18,6 +18,7 @@ import { GdaxTickerSubscription } from './channels/gdax-ticker-subscription';
 import { timeFormat } from 'd3-ng2-service/src/bundle-d3';
 import { subscribeOn } from 'rxjs/operator/subscribeOn';
 import { ThrottledRequestQueue } from '../../helper/throttled-request-queue/throttled-request-queue';
+import { GdaxMatchSubscription } from './channels/gdax-match-subscription';
 
 @Injectable()
 export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
@@ -35,12 +36,13 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    * List of active subscriptions. Key: Product-ID i.e. BTC-USD
    */
    private heartbeatSubscriptions = new Map<string, GdaxChannelSubscription>();
-   private tickerSubscriptions = new Map<string, GdaxTickerSubscription>();
-   private tradeSubscriptions = new Map<string, GdaxChannelSubscription>();
+   private matchSubscriptions = new Map<string, GdaxTickerSubscription>();
+   private tradeSubscriptions = new Map<string, GdaxMatchSubscription>();
    private candleSubscriptions = new Map<string, GdaxCandlesSubscription>();
 
    /** Saves the mapping from asset pair symbols to product keys */
    private symbolToProductMapping = new Map<string, string>();
+   private availableAssetPairs: AssetPair[] = [];
 
    /** Currently available subscriptions - Key: ChannelId */
    //private subscriptions: Map<number, GDAXChannelSubscription> = new Map<number, GDAXChannelSubscription>();
@@ -77,7 +79,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
          if (parsedData.hasOwnProperty('type')) {
             switch (parsedData.type) {
                case 'error':
-                  console.log(`## GDAX ## Error - ${parsedData}`);
+                  console.log(`## GDAX ## Error - ${JSON.stringify(parsedData)}`);
                   break;
 
                case 'subscriptions':
@@ -88,7 +90,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
                   break;
 
                case 'ticker':
-                  let subscription = this.tickerSubscriptions.get(parsedData.product_id);
+                  let subscription = this.matchSubscriptions.get(parsedData.product_id);
                   if (subscription) {
                      subscription.pushIntoSubscription(parsedData);
                   }
@@ -101,6 +103,10 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
                   break;
 
                case 'match':
+                  let tradeSubscription = this.tradeSubscriptions.get(parsedData.product_id);
+                  if (tradeSubscription) {
+                     tradeSubscription.pushIntoSubscription(parsedData);
+                  }               
                   break;
             }
          } else {
@@ -150,10 +156,38 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    }
 
    subscribeToAssetTrades(pair: string): Observable<AssetTrade> {
-      throw new Error("Method not implemented.");
+      let productKey = this.symbolToProductMapping.get(pair);
+
+      let subscription: GdaxMatchSubscription;
+
+      if (!this.tradeSubscriptions.has(productKey)) {
+         subscription = new GdaxMatchSubscription();
+         subscription.key = productKey;
+         subscription.assetPair = this.availableAssetPairs.find(x => x.symbol.toLowerCase() == pair.toLowerCase());
+         this.tradeSubscriptions.set(productKey, subscription);
+
+         //in gdax, the ticker message consists of two api requests
+         //request ticker stats
+         this.apiRequestQueue.enqueue(this.apiUrl + `/products/${productKey}/trades`).map(result => result.json()).subscribe(tradeResult => {
+            subscription.pushApiResultIntoSubscription(tradeResult);
+         });
+
+         //subscribe to ticker channel
+         this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Matches, productKey, false));
+      }
+      else {
+         subscription = this.tradeSubscriptions.get(productKey);
+      }
+
+      return subscription.subject;
    }
+
    unsubscribeFromAssetTrades(pair: string): void {
-      throw new Error("Method not implemented.");
+      //subscribe from trade channel
+      let productKey = this.symbolToProductMapping.get(pair);
+      if(productKey) {
+         this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Matches, productKey, true));
+      }
    }
 
    /**
@@ -191,6 +225,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
             }
          }
 
+         this.availableAssetPairs = assetPairs;
          return assetPairs;
       });
    }
@@ -250,10 +285,10 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
 
       let subscription: GdaxTickerSubscription;
 
-      if (!this.tickerSubscriptions.has(productKey)) {
+      if (!this.matchSubscriptions.has(productKey)) {
          subscription = new GdaxTickerSubscription();
          subscription.key = productKey;
-         this.tickerSubscriptions.set(productKey, subscription);
+         this.matchSubscriptions.set(productKey, subscription);
 
          //in gdax, the ticker message consists of two api requests
          //request ticker stats
@@ -270,7 +305,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
          this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Ticker, productKey, false));
       }
       else {
-         subscription = this.tickerSubscriptions.get(productKey);
+         subscription = this.matchSubscriptions.get(productKey);
       }
 
       return subscription.subject;
@@ -280,7 +315,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    unsubscribeFromTickerMessages(pair: string): void {
       let productKey = this.symbolToProductMapping.get(pair);
 
-      let subscription: GdaxTickerSubscription = this.tickerSubscriptions.get(productKey);
+      let subscription: GdaxTickerSubscription = this.matchSubscriptions.get(productKey);
 
       if (subscription && subscription.subject.observers.length == 0) {
          //unsubscribe from ticker channel
