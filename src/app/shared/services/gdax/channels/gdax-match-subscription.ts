@@ -16,7 +16,7 @@ export class GdaxMatchSubscription implements GdaxChannelSubscription {
 
    pushIntoSubscription(match: GdaxMatch): void {
       let matchTime = new Date(Date.parse(match.time));
-      if(!this.lastMatchTime || this.lastMatchTime.getTime() < matchTime.getTime()) {
+      if(!this.lastMatchTime || this.lastMatchTime.getTime() <= matchTime.getTime()) {
          this.lastMatchTime = matchTime;
          let tradeMessage = new AssetTrade();
          tradeMessage.price = parseFloat(match.price);
@@ -31,7 +31,9 @@ export class GdaxMatchSubscription implements GdaxChannelSubscription {
    }
 
    pushApiResultIntoSubscription(tradeApiResults:GdaxApiTrade[]): void {
-      for(let trade of tradeApiResults) {
+      let orderedMatches = tradeApiResults.sort((a, b) => new Date(Date.parse(a.time)).getTime() - new Date(Date.parse(b.time)).getTime())
+
+      for(let trade of orderedMatches) {
          let tradeMessage = new AssetTrade();
          tradeMessage.dominantAsset = this.assetPair.primaryAsset;
          tradeMessage.secondaryAsset = this.assetPair.secondaryAsset;
@@ -40,7 +42,7 @@ export class GdaxMatchSubscription implements GdaxChannelSubscription {
          tradeMessage.price = parseFloat(trade.price);
          tradeMessage.tradeType = trade.side == "sell" ? AssetOrderType.Sell : AssetOrderType.Buy;
 
-         if(!this.lastMatchTime || this.lastMatchTime.getTime() > tradeMessage.timestamp.getTime()) {
+         if(!this.lastMatchTime || this.lastMatchTime.getTime() <= tradeMessage.timestamp.getTime()) {
             this.lastMatchTime = tradeMessage.timestamp;
             this.subject.next(tradeMessage);
          }
