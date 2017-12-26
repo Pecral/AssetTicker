@@ -37,7 +37,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    * List of active subscriptions. Key: Product-ID i.e. BTC-USD
    */
    private heartbeatSubscriptions = new Map<string, GdaxChannelSubscription>();
-   private matchSubscriptions = new Map<string, GdaxTickerSubscription>();
+   private tickerSubscriptions = new Map<string, GdaxTickerSubscription>();
    private tradeSubscriptions = new Map<string, GdaxMatchSubscription>();
    private candleSubscriptions = new Map<string, GdaxCandlesSubscription>();
    private orderBookSubscriptions = new Map<string, GdaxOrderBookSubscription>();
@@ -92,7 +92,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
                   break;
 
                case 'ticker':
-                  let subscription = this.matchSubscriptions.get(parsedData.product_id);
+                  let subscription = this.tickerSubscriptions.get(parsedData.product_id);
                   if (subscription) {
                      subscription.pushIntoSubscription(parsedData);
                   }
@@ -131,6 +131,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
 
    /** Gets called if the websocket sends us a message about our current subscriptions */
    private onSubscriptionsMessage(message: any) {
+      console.log(`## GDAX ## Subscriptions ${JSON.stringify(message)}`);
       //it should have the property 'channels'
       if (message.channels && message.channels instanceof Array) {
          for (let channel of message.channels) {
@@ -197,6 +198,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
       let productKey = this.symbolToProductMapping.get(pair);
       if(productKey) {
          this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Matches, productKey, true));
+         this.tradeSubscriptions.delete(productKey);
       }
    }
 
@@ -280,6 +282,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
       let productKey = this.symbolToProductMapping.get(pair);
       if(productKey) {
          this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Level2, productKey, true));
+         this.orderBookSubscriptions.delete(productKey);
       }
    }
 
@@ -321,7 +324,7 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
    }
 
    unsubscribeFromCandles(pair: string, timeFrame: string): void {
-      throw new Error("Method not implemented.");
+      
    }
 
    subscribeToTickerMessages(pair: string): Observable<TickerMessage> {
@@ -329,10 +332,10 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
 
       let subscription: GdaxTickerSubscription;
 
-      if (!this.matchSubscriptions.has(productKey)) {
+      if (!this.tickerSubscriptions.has(productKey)) {
          subscription = new GdaxTickerSubscription();
          subscription.key = productKey;
-         this.matchSubscriptions.set(productKey, subscription);
+         this.tickerSubscriptions.set(productKey, subscription);
 
          //in gdax, the ticker message consists of two api requests
          //request ticker stats
@@ -349,21 +352,21 @@ export class GdaxExchangeService implements ExchangeTicker, OnDestroy {
          this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Ticker, productKey, false));
       }
       else {
-         subscription = this.matchSubscriptions.get(productKey);
+         subscription = this.tickerSubscriptions.get(productKey);
       }
 
       return subscription.subject;
-      //return Observable.empty<TickerMessage>();
    }
 
    unsubscribeFromTickerMessages(pair: string): void {
       let productKey = this.symbolToProductMapping.get(pair);
 
-      let subscription: GdaxTickerSubscription = this.matchSubscriptions.get(productKey);
+      let subscription: GdaxTickerSubscription = this.tickerSubscriptions.get(productKey);
 
       if (subscription && subscription.subject.observers.length == 0) {
          //unsubscribe from ticker channel
          this.websocket.send(this.getChannelSubscriptionMessage(ChannelType.Ticker, productKey, true));
+         this.tickerSubscriptions.delete(productKey);
       }
    }
 

@@ -12,7 +12,7 @@ export class GdaxMatchSubscription implements GdaxChannelSubscription {
    channelState: ChannelSubscriptionState;
 
    lastMatchTime: Date;
-   subject: ReplaySubject<AssetTrade> = new ReplaySubject<AssetTrade>(1);
+   subject: ReplaySubject<AssetTrade> = new ReplaySubject<AssetTrade>(25);
 
    pushIntoSubscription(match: GdaxMatch): void {
       let matchTime = new Date(Date.parse(match.time));
