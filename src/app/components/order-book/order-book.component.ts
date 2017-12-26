@@ -4,6 +4,7 @@ import { OrderBookPosition } from './../../shared/models/order-book-position';
 import { ExchangeTickerHandlerService } from './../../shared/services/exchange-ticker-handler.service';
 import { OrderBook } from './../../shared/models/order-book';
 import { ExchangeTickerType } from '../../shared/models/exchange-ticker-type';
+import { OrderBookSide } from '../../shared/models/order-book-message';
 
 @Component({
    selector: 'order-book',

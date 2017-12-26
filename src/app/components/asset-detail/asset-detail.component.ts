@@ -6,7 +6,7 @@ import { Subscription } from 'rxjs/Subscription';
 import { ExchangeTickerHandlerService } from '../../shared/services/exchange-ticker-handler.service';
 
 import { ExchangeTicker } from '../../shared/services/exchange-ticker';
-import { ExchangeTickerType } from '../../shared/models/exchange-ticker-type';
+import { ExchangeTickerType, ExchangeNameResolver } from '../../shared/models/exchange-ticker-type';
 import { AssetTrade } from '../../shared/models/asset-trade';
 
 @Component({
@@ -45,12 +45,11 @@ export class AssetDetailComponent implements OnInit, OnDestroy {
 
    ngOnInit() {
       this.route.params.subscribe(params => {
-         let exchangeParam:string = params['exchange'];
-         let exchange = ExchangeTickerType[this.convertWordToPascalCase(exchangeParam.toLowerCase())];
+         let exchange = ExchangeNameResolver.Resolve(params['exchange']);
 
          //if the requested exchange does not exist, we'll navigate to the start page
          if(exchange == undefined) {
-            this.router.navigate(['']);
+            this.router.navigate(['/']);
          }
 
          let symbolpair: string = params['symbolpair'];

@@ -103,10 +103,10 @@ export class AssetOverviewComponent implements OnInit {
       if (excludePrimaryTradedPair) {
          let primarilyTradedPair = this.getPrimaryAssetPair(asset);
 
-         return this.filteredExchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode && !(x.exchange == primarilyTradedPair.exchange && x.pair.symbol == primarilyTradedPair.pair.symbol));
+         return this.filteredExchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode && !(x.exchange == primarilyTradedPair.exchange && x.pair.symbol == primarilyTradedPair.pair.symbol)).sort(this.compareExchangeAssetPair);
       }
       else {
-         return this.filteredExchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode);
+         return this.filteredExchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode).sort(this.compareExchangeAssetPair);
       }
    }
 
@@ -117,31 +117,36 @@ export class AssetOverviewComponent implements OnInit {
          this.primaryAssetPairs.get(asset.shortcode);
       }
 
-      //filter for usd-based pairs --TODO: Priority by settings
-      let importantFiat = ['USD', 'EUR'];
-
-      let prioritizedAssets = this.filteredExchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode).sort((assetA, assetB) => {
-         let aIsFiat = importantFiat.indexOf(assetA.pair.secondaryAsset.shortcode.toUpperCase()) != -1 ? 1 : -1;
-         let bIsFiat = importantFiat.indexOf(assetB.pair.secondaryAsset.shortcode.toUpperCase()) != -1 ? 1 : -1;
-
-         //if only one of them is fiat, it is prioritized
-         if (aIsFiat != bIsFiat) {
-            return bIsFiat - aIsFiat;
-         }
-         //otherwise prioritize by volume
-         else {
-            return (assetA.latestTicker == null ? 0 : assetA.latestTicker.volume) - (assetB.latestTicker == null ? 0 : assetB.latestTicker.volume);
-         }
-      });;
+      let prioritizedAssets = this.filteredExchangeAssetPairs.filter(x => x.pair.primaryAsset.shortcode == asset.shortcode).sort(this.compareExchangeAssetPair);
 
       let priorityPair = prioritizedAssets[0];
       //save only if every asset pair already has received a ticker message
-      if (this.filteredExchangeAssetPairs.every(x => x.latestTicker !== undefined && x.latestTicker !== null)) {
+      if (this.getExchangeAssetPairs(asset, false).every(x => x.latestTicker !== undefined && x.latestTicker !== null)) {
          this.primaryAssetPairs.set(asset.shortcode, prioritizedAssets[0]);
          this.primaryAssetPairsSearchItem = this.currentSearchItem;
+
+         //order all exchange asset pairs of this asset as soon as every ticker is available
       }
 
       return prioritizedAssets[0];
+   }
+
+   /** Compares two assets by specific */
+   compareExchangeAssetPair(assetA: ExchangeAssetPair, assetB: ExchangeAssetPair): number {
+      //filter for usd-based pairs --TODO: Priority by settings
+      let importantFiat = ['USD', 'EUR'];
+
+      let aIsFiat = importantFiat.indexOf(assetA.pair.secondaryAsset.shortcode.toUpperCase()) != -1 ? 1 : -1;
+      let bIsFiat = importantFiat.indexOf(assetB.pair.secondaryAsset.shortcode.toUpperCase()) != -1 ? 1 : -1;
+
+      //if only one of them is fiat, it is prioritized
+      if (aIsFiat != bIsFiat) {
+         return bIsFiat - aIsFiat;
+      }
+      //otherwise prioritize by volume
+      else {
+         return (assetB.latestTicker == null ? 0 : assetB.latestTicker.volume) - (assetA.latestTicker == null ? 0 : assetA.latestTicker.volume);
+      }
    }
 
    /** Research search so that all exchange asset pairs will be displayed */
