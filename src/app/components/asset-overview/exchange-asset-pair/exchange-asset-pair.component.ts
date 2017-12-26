@@ -159,7 +159,7 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
          }
 
          //subscribe to candles if the candles are the only things that have changed
-         if(this.enableChart && this.triggerChartInitialization && this.subscribedCandlesSymbol != this.exchangeAssetPair.pair.symbol) {
+         if(this.enableChart && this.triggerChartInitialization && (this.subscribedCandlesSymbol != this.exchangeAssetPair.pair.symbol || !this.chartIsInitialized)) {
             this.initializeChart();
             this.subscribeToCandles();
          }
