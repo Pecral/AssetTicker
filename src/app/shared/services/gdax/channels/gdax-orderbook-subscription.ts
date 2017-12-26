@@ -15,6 +15,8 @@ export class GdaxOrderBookSubscription implements GdaxChannelSubscription {
 
    orderbook: OrderBook = new OrderBook();
 
+   /** Internal order book with all positions */
+   private internalOrderBook: OrderBook = new OrderBook();
 
    pushIntoSubscription(message: any): void {
       
@@ -23,90 +25,85 @@ export class GdaxOrderBookSubscription implements GdaxChannelSubscription {
    pushSnapshotIntoSubscription(snapshot:GdaxOrderBookSnapshot) {
       //iterate over asks (first 25 for now because we didn't implement granuality yet)
       
-      for(let index = 0; index < 25 && index < snapshot.asks.length; index++) {
-         let ask = snapshot.asks[index];
+      for(let ask of snapshot.asks) {
          let position = new OrderBookPosition();
          position.orderType = AssetOrderType.Sell;
          position.price = parseFloat(ask[0]);
          position.volume = parseFloat(ask[1]);
 
-         this.orderbook.asks.push(position);
+         this.internalOrderBook.asks.push(position);
       }
 
-      this.orderbook.asks = this.orderbook.asks.sort((p1, p2) => p1.price - p2.price);
-      this.orderbook.calculateVolumeTotal(OrderBookSide.Asks);
+      this.internalOrderBook.asks = this.internalOrderBook.asks.sort((p1, p2) => p1.price - p2.price);
 
-      for(let index = 0; index < 25 && index < snapshot.bids.length; index++) {
-         let bid = snapshot.bids[index];
+      for(let bid of snapshot.bids) {
          let position = new OrderBookPosition();
          position.orderType = AssetOrderType.Buy;
          position.price = parseFloat(bid[0]);
          position.volume = parseFloat(bid[1]);
 
-         this.orderbook.bids.push(position);
+         this.internalOrderBook.bids.push(position);
       }      
 
-      this.orderbook.bids = this.orderbook.bids.sort((p1, p2) => p2.price - p1.price);
+      this.internalOrderBook.bids = this.internalOrderBook.bids.sort((p1, p2) => p2.price - p1.price);
+
+      this.orderbook.bids = this.internalOrderBook.bids.slice(0, 25);
+      this.orderbook.asks = this.internalOrderBook.asks.slice(0, 25);
+
       this.orderbook.calculateVolumeTotal(OrderBookSide.Bids);
+      this.orderbook.calculateVolumeTotal(OrderBookSide.Asks);
    }
 
    pushL2UpdateIntoSubscription(l2update: GdaxL2Update) {
-      // for(let change of l2update.changes) {
-      //    let orderAction = change[0].toLowerCase() == "buy" ? AssetOrderType.Buy : AssetOrderType.Sell;
-      //    let bookSideType = orderAction == AssetOrderType.Buy ? OrderBookSide.Bids : OrderBookSide.Asks;
-      //    let price = parseFloat(change[1]); 
-      //    let size = parseFloat(change[2]);
+      for(let change of l2update.changes) {
+         let orderAction = change[0].toLowerCase() == "buy" ? AssetOrderType.Buy : AssetOrderType.Sell;
+         let bookSideType = orderAction == AssetOrderType.Buy ? OrderBookSide.Bids : OrderBookSide.Asks;
+         let price = parseFloat(change[1]); 
+         let size = parseFloat(change[2]);
 
-      //    let bookSide : OrderBookPosition[] = change[0].toLowerCase() == "buy" ? this.orderbook.bids : this.orderbook.asks;
-      //    let index = bookSide.findIndex(x => x.price == price);
+         let bookSide : OrderBookPosition[] = change[0].toLowerCase() == "buy" ? this.internalOrderBook.bids : this.internalOrderBook.asks;
+         let index = bookSide.findIndex(x => x.price == price);
 
-      //    //delete position if it exists in our order book side
-      //    if(size == 0 && index != -1) {
-      //       let position = bookSide.splice(index, 1)[0];
+         //delete position if it exists in our order book side
+         if(size == 0 && index != -1) {
+            let position = bookSide.splice(index, 1)[0];
 
-      //       let message = new OrderBookMessage();
-      //       message.action = OrderBookAction.Delete;
-      //       message.bookSide = bookSideType;
-      //       message.position = position;
-      //       this.orderbook.orderBookMessage.next(message);
-      //    }
-      //    else if(size != 0) {
-      //       let position = new OrderBookPosition();
-      //       position.price = price;
-      //       position.volume = size;
-      //       position.orderType = orderAction;
+            if(orderAction == AssetOrderType.Buy) {
+               this.orderbook.bids = bookSide.slice(0, 25);
+            }
+            else {
+               this.orderbook.asks = bookSide.slice(0, 25);
+            }
+         }
+         else if(size != 0) {
+            let position = new OrderBookPosition();
+            position.price = price;
+            position.volume = size;
+            position.orderType = orderAction;
 
-      //       let updatedPosition: boolean = false;
+            let addedPosition: boolean = false;
 
-      //       switch(orderAction) {
-      //          case AssetOrderType.Buy:
-      //             //add only if the order book doesn't contain 25 positions or if it's within our range of displayed positions
-      //             if(bookSide.length < 25 || bookSide[bookSide.length - 1].price >= price){
-      //                bookSide.push(position);
-      //                updatedPosition = true;
-      //             }
-      //             this.orderbook.bids = bookSide.sort((p1, p2) => p2.price - p1.price);
-      //          break;
-      //          case AssetOrderType.Sell:
-      //             //add only if the order book doesn't contain 25 positions or if it's within our range of displayed positions
-      //             if(bookSide.length < 25 || bookSide[bookSide.length - 1].price <= price){
-      //                bookSide.push(position);
-      //                updatedPosition = true;
-      //             }
-      //             this.orderbook.asks = bookSide.sort((p1, p2) => p1.price - p2.price);
-      //          break;
-      //       }
+            if(index != -1) {
+               bookSide[index].volume = size;
+            }
+            else {
+               bookSide.push(position);
+               addedPosition = true;
+            }
 
-      //       this.orderbook.calculateVolumeTotal(bookSideType);
+            if(addedPosition) {
+               if(orderAction == AssetOrderType.Buy) {
+                  this.internalOrderBook.bids = bookSide.sort((p1, p2) => p2.price - p1.price);
+                  this.orderbook.bids = bookSide.slice(0, 25);
+               }
+               else {
+                  this.internalOrderBook.asks = bookSide.sort((p1, p2) => p1.price - p2.price);
+                  this.orderbook.asks = bookSide.slice(0, 25);
+               }
+            }
+         }
 
-      //       if(updatedPosition) {
-      //          let message = new OrderBookMessage();
-      //          message.action = OrderBookAction.Update;
-      //          message.bookSide = bookSideType;
-      //          message.position = position;
-      //          this.orderbook.orderBookMessage.next(message);
-      //       }
-      //    }
-      // }
+         this.orderbook.calculateVolumeTotal(bookSideType);
+      }
    }
 }
