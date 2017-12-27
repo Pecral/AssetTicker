@@ -43,11 +43,12 @@ export class PoloniexExchangeService implements ExchangeTicker {
    private candleSubscriptions = new Map<string, PoloniexCandlesSubscription>();
    private tickerSubscriptions = new Map<number, PoloniexTickerSubscription>();
    private tradeSubscriptions = new Map<number, PoloniexTradeSubscription>();
+   private orderBookSubscriptions = new Map<number, PoloniexOrderBookSubscription>();
 
    private queuedSubscriptionMessages: string[] = [];
 
    /** The order book updates and trades are returned in one channel. Thus we have to save whether we've subscribed to it for one of them to prevent duplicate subscriptions. This is a list of product keys. */
-   private subscribedTradesAndOrderBookChannels : string[] = [];
+   private subscribedTradesAndOrderBookChannels : number[] = [];
 
    constructor(private http: Http) {
       this.apiRequestQueue = new ThrottledRequestQueue(http, 3, 6);
@@ -74,10 +75,6 @@ export class PoloniexExchangeService implements ExchangeTicker {
 
       if(dataJson instanceof Array) {
          let channelId: number = dataJson[0];
-         if(channelId != 1002) {
-            console.log(message);
-         }
-         
 
          switch(channelId) {
             //ticker
@@ -85,6 +82,9 @@ export class PoloniexExchangeService implements ExchangeTicker {
                let subscriptionState = dataJson[1];
                if(subscriptionState == 1) {
                   console.log('## Poloniex ## Now subscribed to ticker channel');
+               }
+               if(subscriptionState == 0) {
+                  console.log('## Poloniex ## Now unsubscribed from ticker channel');
                }
 
                if(dataJson.length >= 3 && dataJson[2] instanceof Array) {
@@ -131,9 +131,16 @@ export class PoloniexExchangeService implements ExchangeTicker {
 
                switch(type) {
                   case "i":
-                     console.log('snapshot');
+                     let orderBookSnapshotSubscription = this.orderBookSubscriptions.get(productId);
+                     if(orderBookSnapshotSubscription) {
+                        orderBookSnapshotSubscription.pushSnapshotIntoSubscription(update[1]);
+                     }
                   break;
                   case "o":
+                     let orderBookSubscription = this.orderBookSubscriptions.get(productId);
+                     if(orderBookSubscription) {
+                        orderBookSubscription.pushUpdateIntoSubscription(update);
+                     }
                   break;
                   case "t":
                      let tradeSubscription = this.tradeSubscriptions.get(productId);
@@ -174,9 +181,9 @@ export class PoloniexExchangeService implements ExchangeTicker {
             })
 
             /** send subscribe request if we're not already subscribed to it (it could happen if we've subscribed to the order book before) */
-            if(this.subscribedTradesAndOrderBookChannels.findIndex(x => x == product.productKey) == -1)
+            if(this.subscribedTradesAndOrderBookChannels.findIndex(x => x == product.id) == -1)
             {
-               this.subscribedTradesAndOrderBookChannels.push(product.productKey);
+               this.subscribedTradesAndOrderBookChannels.push(product.id);
                this.websocketSafeSend(JSON.stringify({"command" : "subscribe", "channel" : product.productKey }));
             }
          }
@@ -189,7 +196,12 @@ export class PoloniexExchangeService implements ExchangeTicker {
       let product = this.symbolToProductMapping.get(pair);
 
       if(product) {
-         this.websocketSafeSend(JSON.stringify({"command" : "unsubscribe", "channel" : product.productKey }));
+         let index = this.subscribedTradesAndOrderBookChannels.findIndex(x => x == product.id);
+         if(index != -1)
+         {
+            this.subscribedTradesAndOrderBookChannels.splice(index, 1);
+            this.websocketSafeSend(JSON.stringify({"command" : "subscribe", "channel" : product.productKey }));
+         }         
       }
    }
 
@@ -285,20 +297,53 @@ export class PoloniexExchangeService implements ExchangeTicker {
    }
 
    getOrderBook(pair: string): OrderBook {
-      return new OrderBook();
+      let product = this.symbolToProductMapping.get(pair);
+
+      if(product) {
+         return this.ensureOrderBookSubscription(product.productKey, product.id).orderbook;
+      }
    }
 
    getOrderBookMessages(pair: string): Observable<OrderBookMessage> {
-      return Observable.empty<OrderBookMessage>();
+      let product = this.symbolToProductMapping.get(pair);
+
+      if(product) {
+         return this.ensureOrderBookSubscription(product.productKey, product.id).orderbook.orderBookMessage;
+      }
    }
 
    /**  */
-   ensureOrderBookSubscription(productKey:string): PoloniexOrderBookSubscription {
-      return;
+   ensureOrderBookSubscription(productKey: string, productId:number): PoloniexOrderBookSubscription {
+      let subscription = this.orderBookSubscriptions.get(productId);
+
+      if(!subscription) {
+         subscription = new PoloniexOrderBookSubscription();
+         subscription.key = productKey;
+
+         this.orderBookSubscriptions.set(productId, subscription);
+         
+         /** send subscribe request if we're not already subscribed to it (it could happen if we've subscribed to the order book before) */
+         if(this.subscribedTradesAndOrderBookChannels.findIndex(x => x == productId) == -1)
+         {
+            this.subscribedTradesAndOrderBookChannels.push(productId);
+            this.websocketSafeSend(JSON.stringify({"command" : "subscribe", "channel" : productKey }));
+         }
+      }
+
+      return subscription;
    }      
 
    unsubscribeFromOrderBook(pair: string): void {
+      let product = this.symbolToProductMapping.get(pair);
 
+      if(product) {
+         let index = this.subscribedTradesAndOrderBookChannels.findIndex(x => x == product.id);
+         if(index != -1)
+         {
+            this.subscribedTradesAndOrderBookChannels.splice(index, 1);
+            this.websocketSafeSend(JSON.stringify({"command" : "subscribe", "channel" : product.productKey }));
+         }         
+      }
    }
 
    getCandlesSnapshot(pair: string, timeFrame: string): Observable<CandleStick[]> {
@@ -306,7 +351,6 @@ export class PoloniexExchangeService implements ExchangeTicker {
 
       if(product) {
          return this.ensureCandlesSubscription(product.productKey, timeFrame).snapshotSubject;
-         //return Observable.empty<CandleStick[]>();
       }
    }
 
@@ -329,22 +373,19 @@ export class PoloniexExchangeService implements ExchangeTicker {
          //request historic rates
          this.apiRequestQueue.enqueue(this.apiUrl + subscription.getSnapshotRequestUrl(new Date()))
             .map(result => result.json())
-            .subscribe(snapshot => subscription.resolveSnapshot(snapshot));
-
-         //TODO: Subscribe to batched-trades-channel so that we can update our candles
-         //Documentation: https://docs.gdax.com/#the-code-classprettyprinttickercode-channel         
+            .subscribe(snapshot => subscription.resolveSnapshot(snapshot));       
       }
       return this.candleSubscriptions.get(mapKey);
    }
 
    unsubscribeFromCandles(pair: string, timeFrame: string): void {
-      
+      //not implemented yet..
    }
 
    subscribeToTickerMessages(pair: string): Observable<TickerMessage> {
-      //we can't subscribe for one ticker/asset specifically, so we have to subscribe for all of them
+      //we can't subscribe for one ticker/asset specifically, so we have to subscribe to all of them
       this.ensureTickerSubscriptions();
-      //we can't subscribe for one ticker/asset specifically, so we have to subscribe for all of them
+
       let product = this.symbolToProductMapping.get(pair);
 
       if(product) {
@@ -358,6 +399,6 @@ export class PoloniexExchangeService implements ExchangeTicker {
    }
 
    unsubscribeFromTickerMessages(pair: string): void {
+      //not implemented yet.. we may have to check to how many tickers we are currently subscribed, because there's only one subscription for all assets
    }
-   
 }
