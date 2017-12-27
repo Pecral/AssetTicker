@@ -10,9 +10,10 @@ export class ExchangeNameResolver {
       switch(nameNoCase) {
          case "bitfinex":
             return ExchangeTickerType.Bitfinex;
-
          case "gdax":
          return ExchangeTickerType.GDAX;
+         case "poloniex":
+         return ExchangeTickerType.Poloniex;
       }
 
       return;

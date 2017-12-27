@@ -11,6 +11,11 @@ import { TickerMessage } from "../../models/ticker-message";
 import { Asset } from "../../models/asset";
 import { Http } from "@angular/http";
 import { Injectable } from "@angular/core";
+import { ThrottledRequestQueue } from "../../helper/throttled-request-queue/throttled-request-queue";
+import { PoloniexCandlesSubscription } from "./channels/poloniex-candles-subscription";
+import { timeFormat } from "d3-ng2-service/src/bundle-d3";
+import { PoloniexTickerSubscription } from "./channels/poloniex-ticker-subscription";
+import { assertNotNull } from "@angular/compiler/src/output/output_ast";
 
 @Injectable()
 export class PoloniexExchangeService implements ExchangeTicker {
@@ -20,16 +25,89 @@ export class PoloniexExchangeService implements ExchangeTicker {
 
    private websocket: WebSocket;
    
-   private readonly websocketUrl: string = 'wss://ws-feed.gdax.com';
+   /** We'll use Poloniex' undocumented api2 because they've pulled support for their original API (api.poloniex.com) */
+   private readonly websocketUrl: string = 'wss://api2.poloniex.com';
    private readonly apiUrl: string = ' https://poloniex.com/public?command=';
 
-   /** Saves the mapping from asset pair symbols to product keys */
-   private symbolToProductMapping = new Map<string, string>();
+   private readonly websocketChannelMapping = { 'ticker': 1002, '24hStats': 1003, 'heartbeat': 1010 };
 
-   private tickerCache = new Map<string, TickerMessage>();
-   
+   private apiRequestQueue: ThrottledRequestQueue;
+
+   /** Saves the mapping from asset pair symbols to product keys */
+   private symbolToProductMapping = new Map<string, { id:number, productKey: string }>();
+
+   private apiTickerMessageCache: Map<string, TickerMessage>;
+   private candleSubscriptions = new Map<string, PoloniexCandlesSubscription>();
+   private tickerSubscriptions = new Map<number, PoloniexTickerSubscription>();
+
+   private queuedSubscriptionMessages: string[] = [];
+
    constructor(private http: Http) {
-      
+      this.apiRequestQueue = new ThrottledRequestQueue(http, 3, 6);
+
+      this.websocket = new WebSocket(this.websocketUrl);
+      this.websocket.onmessage = this.onWebsocketMessageReceived.bind(this);
+      this.websocket.onerror = this.onWebsocketError.bind(this);
+
+      this.websocket.onopen = () => {
+         //inform everyone that the websocket is opened now -- should be deprecated as soon as we don't have to prevent method-calls when the websocket isn't ready
+         //we want to queue this calls and process them as soon as the websocket is opened (handled in websocket-stash)
+         this.websocketIsConnected.next(true);
+
+         if(this.queuedSubscriptionMessages.length > 0) {
+            for(let subscription of this.queuedSubscriptionMessages) {
+               this.websocket.send(subscription);
+            }
+         }
+      }      
+   }
+
+   onWebsocketMessageReceived(message: any) {
+      let dataJson = JSON.parse(message.data);
+
+      if(dataJson instanceof Array) {
+         let channelId: number = dataJson[0];
+
+         switch(channelId) {
+            //ticker
+            case 1002:
+               let subscriptionState = dataJson[1];
+               if(subscriptionState == 1) {
+                  console.log('## Poloniex ## Now subscribed to ticker channel');
+               }
+
+               if(dataJson.length >= 3 && dataJson[2] instanceof Array) {
+                  this.onTickerMessage(dataJson[2]);
+               }
+            break;
+         }
+      }
+      else {
+         console.warn(`## Poloniex ## Received unknown websocket message '${message.data}'`);
+      }
+   }
+
+   onWebsocketError(message: string) {
+      console.log(`## Poloniex ## Error: ${JSON.stringify(message)}`);
+   }
+
+   /** Push ticker message into the subscription depending on the product id */
+   onTickerMessage(tickerData:Array<number>) {
+      let productId = tickerData[0];
+
+      let subscription = this.tickerSubscriptions.get(productId);
+      if(subscription) {
+         subscription.pushIntoSubscription(tickerData);
+      }
+   }
+
+   websocketSafeSend(message: string) {
+      if(this.websocket.readyState != 0) {
+         this.websocket.send(message);
+      }
+      else {
+         this.queuedSubscriptionMessages.push(message);
+      }
    }
 
    subscribeToAssetTrades(pair: string): Observable<AssetTrade> {
@@ -38,10 +116,13 @@ export class PoloniexExchangeService implements ExchangeTicker {
    unsubscribeFromAssetTrades(pair: string): void {
       
    }
+
    getAvailableAssetPairs(): Observable<AssetPair[]> {
-      return this.http.get(this.apiUrl + 'returnTicker').map(result => {
+      return this.apiRequestQueue.enqueue(this.apiUrl + 'returnTicker').map(result => {
          let assetPairs: AssetPair[] = [];
          let resultJson = result.json();
+         this.apiTickerMessageCache = new Map<string, TickerMessage>();
+         this.symbolToProductMapping = new Map<string, { id:number, productKey: string }>();
 
          //return empty array if request failed, log error
          if(result.status != 200 ) {
@@ -67,14 +148,15 @@ export class PoloniexExchangeService implements ExchangeTicker {
                assetPair.secondaryAsset = quoteAsset;
 
                assetPair.symbol = secondarySymbol + primarySymbol;
-
-               this.symbolToProductMapping.set(assetPair.symbol, pairKey);
-
                assetPairs.push(assetPair);
 
-               //temporary & dirty, cache ticker
+               //we can extract the ticker data from this api request
+               //this is used as an initial cached value as soon as the user requests a specific ticker message
                let tickerMessage = new TickerMessage();
-               let tickerJson = resultJson[pairKey];
+               let tickerJson = resultJson[pairKey] as ApiTickerModel;
+
+               //safe ids/keys
+               this.symbolToProductMapping.set(assetPair.symbol, { id: tickerJson.id, productKey: pairKey });
 
                tickerMessage.high = parseFloat(tickerJson.high24hr);
                tickerMessage.low = parseFloat(tickerJson.low24hr);
@@ -82,21 +164,44 @@ export class PoloniexExchangeService implements ExchangeTicker {
                tickerMessage.dailyChangePercent = parseFloat(tickerJson.percentChange) * 100;
                tickerMessage.lastPrice = parseFloat(tickerJson.last);
 
-               this.tickerCache.set(assetPair.symbol, tickerMessage);
+               this.apiTickerMessageCache.set(assetPair.symbol, tickerMessage);
             }
          }
 
          assetPairs = assetPairs.sort((a, b) => {
-            let firstTicker = this.tickerCache.get(a.symbol);
-            let secondTicker = this.tickerCache.get(b.symbol);
+            let firstTicker = this.apiTickerMessageCache.get(a.symbol);
+            let secondTicker = this.apiTickerMessageCache.get(b.symbol);
 
             return secondTicker.volume * secondTicker.lastPrice - firstTicker.volume * firstTicker.lastPrice;
          });
-         
+
          return assetPairs;
       });
 
    }
+
+   /** Create ticker subscription instances for all assets - we can't subscribe for one asset specifically */
+   ensureTickerSubscriptions() {
+      if(Array.from(this.tickerSubscriptions.keys()).length == 0) {
+         let assets = Array.from(this.symbolToProductMapping.keys());
+
+         for(let asset of assets) {
+            let product = this.symbolToProductMapping.get(asset);
+   
+            let tickerSubscription = new PoloniexTickerSubscription();
+            tickerSubscription.key = product.productKey;
+   
+            //get from cache if it exists
+            if(this.apiTickerMessageCache.has(asset)) { 
+               tickerSubscription.pushApiResultsIntoSubscription(this.apiTickerMessageCache.get(asset));
+            }
+   
+            this.tickerSubscriptions.set(product.id, tickerSubscription);
+         }
+         this.websocketSafeSend(JSON.stringify({"command" : "subscribe", "channel" : this.websocketChannelMapping.ticker }));
+      }
+   }
+
    getOrderBook(pair: string): OrderBook {
       return new OrderBook();
    }
@@ -107,22 +212,61 @@ export class PoloniexExchangeService implements ExchangeTicker {
 
    }
    getCandlesSnapshot(pair: string, timeFrame: string): Observable<CandleStick[]> {
-      return Observable.empty<CandleStick[]>();
+      let productKey = this.symbolToProductMapping.get(pair);
+
+      if(productKey) {
+         //return this.ensureCandlesSubscription(productKey, timeFrame).snapshotSubject;
+         return Observable.empty<CandleStick[]>();
+      }
    }
+
    subscribeToCandles(pair: string, timeFrame: string): Observable<CandleStick> {
-      return Observable.empty<CandleStick>();
+      let product = this.symbolToProductMapping.get(pair);
+
+      if(product) {
+         return this.ensureCandlesSubscription(product.productKey, timeFrame).subject;
+      }
    }
+
+   private ensureCandlesSubscription(productKey: string, timeFrame: string): PoloniexCandlesSubscription {
+      let mapKey = productKey + timeFrame;
+
+      if (!this.candleSubscriptions.has(mapKey)) {
+         let subscription = new PoloniexCandlesSubscription(productKey, timeFrame);
+
+         this.candleSubscriptions.set(mapKey, subscription);
+
+         //request historic rates
+         this.apiRequestQueue.enqueue(this.apiUrl + subscription.getSnapshotRequestUrl(new Date()))
+            .map(result => result.json())
+            .subscribe(snapshot => subscription.resolveSnapshot(snapshot));
+
+         //TODO: Subscribe to batched-trades-channel so that we can update our candles
+         //Documentation: https://docs.gdax.com/#the-code-classprettyprinttickercode-channel         
+      }
+      return this.candleSubscriptions.get(mapKey);
+   }
+
    unsubscribeFromCandles(pair: string, timeFrame: string): void {
       
    }
+
    subscribeToTickerMessages(pair: string): Observable<TickerMessage> {
-      if(this.tickerCache.has(pair)) {
-         return Observable.of(this.tickerCache.get(pair));
+      //we can't subscribe for one ticker/asset specifically, so we have to subscribe for all of them
+      this.ensureTickerSubscriptions();
+      //we can't subscribe for one ticker/asset specifically, so we have to subscribe for all of them
+      let product = this.symbolToProductMapping.get(pair);
+
+      if(product) {
+         let subscription = this.tickerSubscriptions.get(product.id);
+
+         return subscription.subject;
       }
       else {
          return Observable.empty<TickerMessage>();
       }
    }
+
    unsubscribeFromTickerMessages(pair: string): void {
    }
    
