@@ -20,7 +20,7 @@ import { assertNotNull } from "@angular/compiler/src/output/output_ast";
 @Injectable()
 export class PoloniexExchangeService implements ExchangeTicker {
 
-   websocketIsConnected: BehaviorSubject<boolean> = new BehaviorSubject(true);
+   websocketIsConnected: BehaviorSubject<boolean> = new BehaviorSubject(false);
    exchangeType: ExchangeTickerType = ExchangeTickerType.Poloniex;
 
    private websocket: WebSocket;

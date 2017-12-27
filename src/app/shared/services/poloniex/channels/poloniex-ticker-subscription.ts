@@ -27,10 +27,10 @@ export class PoloniexTickerSubscription {
          let ticker = new TickerMessage();
          ticker.lastPrice = parseFloat(message[1]);
          //message 2 && 3 is lowestAsk && highestBid, not needed at the moment
-         ticker.dailyChangePercent = parseFloat(message[4]);
+         ticker.dailyChangePercent = parseFloat(message[4]) * 100;
          ticker.volume = parseFloat(message[6]); //message [6] == quote volume
          ticker.timestamp = new Date();
-         ticker.open = ticker.lastPrice / ( 1 + ticker.dailyChangePercent); //calculate start value;
+         ticker.open = ticker.lastPrice / ( 1 + parseFloat(message[4])); //calculate start value;
          ticker.dailyChange = ticker.lastPrice - ticker.open;
 
          this.subject.next(ticker);
