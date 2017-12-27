@@ -54,7 +54,3 @@ export class PoloniexTickerSubscription {
       }
    }
 }
-
-export class DailyTickerStats {
-
-}

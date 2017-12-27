@@ -16,6 +16,8 @@ import { PoloniexCandlesSubscription } from "./channels/poloniex-candles-subscri
 import { timeFormat } from "d3-ng2-service/src/bundle-d3";
 import { PoloniexTickerSubscription } from "./channels/poloniex-ticker-subscription";
 import { assertNotNull } from "@angular/compiler/src/output/output_ast";
+import { PoloniexTradeSubscription } from "./channels/poloniex-trade-subscription";
+import { PoloniexOrderBookSubscription } from "./channels/poloniex-orderbook-subscription";
 
 @Injectable()
 export class PoloniexExchangeService implements ExchangeTicker {
@@ -30,6 +32,7 @@ export class PoloniexExchangeService implements ExchangeTicker {
    private readonly apiUrl: string = ' https://poloniex.com/public?command=';
 
    private readonly websocketChannelMapping = { 'ticker': 1002, '24hStats': 1003, 'heartbeat': 1010 };
+   private availableAssetPairs: AssetPair[];
 
    private apiRequestQueue: ThrottledRequestQueue;
 
@@ -39,8 +42,12 @@ export class PoloniexExchangeService implements ExchangeTicker {
    private apiTickerMessageCache: Map<string, TickerMessage>;
    private candleSubscriptions = new Map<string, PoloniexCandlesSubscription>();
    private tickerSubscriptions = new Map<number, PoloniexTickerSubscription>();
+   private tradeSubscriptions = new Map<number, PoloniexTradeSubscription>();
 
    private queuedSubscriptionMessages: string[] = [];
+
+   /** The order book updates and trades are returned in one channel. Thus we have to save whether we've subscribed to it for one of them to prevent duplicate subscriptions. This is a list of product keys. */
+   private subscribedTradesAndOrderBookChannels : string[] = [];
 
    constructor(private http: Http) {
       this.apiRequestQueue = new ThrottledRequestQueue(http, 3, 6);
@@ -67,6 +74,10 @@ export class PoloniexExchangeService implements ExchangeTicker {
 
       if(dataJson instanceof Array) {
          let channelId: number = dataJson[0];
+         if(channelId != 1002) {
+            console.log(message);
+         }
+         
 
          switch(channelId) {
             //ticker
@@ -79,6 +90,14 @@ export class PoloniexExchangeService implements ExchangeTicker {
                if(dataJson.length >= 3 && dataJson[2] instanceof Array) {
                   this.onTickerMessage(dataJson[2]);
                }
+            break;
+            //heartbeat
+            case 1010:
+               console.log('## Poloniex ## Websocket Heartbeat');
+            break;
+            //trade and order book
+            default:
+               this.onOrderBookAndTradeMessage(dataJson);
             break;
          }
       }
@@ -101,6 +120,33 @@ export class PoloniexExchangeService implements ExchangeTicker {
       }
    }
 
+   onOrderBookAndTradeMessage(message:any) {
+      if(message instanceof Array && message.length == 3) {
+         let productId = message[0];
+
+         let updates = message[2];
+         if(updates instanceof Array) {
+            for(let update of updates) {
+               let type = update[0];
+
+               switch(type) {
+                  case "i":
+                     console.log('snapshot');
+                  break;
+                  case "o":
+                  break;
+                  case "t":
+                     let tradeSubscription = this.tradeSubscriptions.get(productId);
+                     if(tradeSubscription) {
+                        tradeSubscription.pushIntoSubscription(update);
+                     }
+                  break;
+               }
+            }
+         }
+      }
+   }
+
    websocketSafeSend(message: string) {
       if(this.websocket.readyState != 0) {
          this.websocket.send(message);
@@ -111,73 +157,109 @@ export class PoloniexExchangeService implements ExchangeTicker {
    }
 
    subscribeToAssetTrades(pair: string): Observable<AssetTrade> {
-      return Observable.empty<AssetTrade>();
+      let product = this.symbolToProductMapping.get(pair);
+
+      if(product) {
+         let subscription = this.tradeSubscriptions.get(product.id);
+
+         if(!subscription) {
+            subscription = new PoloniexTradeSubscription();
+            subscription.key = product.productKey;
+            subscription.assetPair = this.availableAssetPairs.find(x => x.symbol.toLowerCase() == pair.toLowerCase());
+
+            this.tradeSubscriptions.set(product.id, subscription);
+            
+            this.apiRequestQueue.enqueue(this.apiUrl +  `returnTradeHistory&currencyPair=${product.productKey}`).map(result => result.json()).subscribe(result => {
+               subscription.pushApiResultIntoSubscription(result);
+            })
+
+            /** send subscribe request if we're not already subscribed to it (it could happen if we've subscribed to the order book before) */
+            if(this.subscribedTradesAndOrderBookChannels.findIndex(x => x == product.productKey) == -1)
+            {
+               this.subscribedTradesAndOrderBookChannels.push(product.productKey);
+               this.websocketSafeSend(JSON.stringify({"command" : "subscribe", "channel" : product.productKey }));
+            }
+         }
+         
+         return subscription.subject;
+      }
    }
+
    unsubscribeFromAssetTrades(pair: string): void {
-      
+      let product = this.symbolToProductMapping.get(pair);
+
+      if(product) {
+         this.websocketSafeSend(JSON.stringify({"command" : "unsubscribe", "channel" : product.productKey }));
+      }
    }
 
    getAvailableAssetPairs(): Observable<AssetPair[]> {
-      return this.apiRequestQueue.enqueue(this.apiUrl + 'returnTicker').map(result => {
-         let assetPairs: AssetPair[] = [];
-         let resultJson = result.json();
-         this.apiTickerMessageCache = new Map<string, TickerMessage>();
-         this.symbolToProductMapping = new Map<string, { id:number, productKey: string }>();
-
-         //return empty array if request failed, log error
-         if(result.status != 200 ) {
-            console.log(`## Poloniex ## Error - Failed to request '/products'. Status code: ${result.statusText}`);
-         }
-         else {
-            for(let pairKey in resultJson) {
-               let assetPair = new AssetPair();
-
-               let splitSymbol = pairKey.indexOf('_');
-               let primarySymbol  = pairKey.substring(0, splitSymbol);
-               let secondarySymbol = pairKey.substring(splitSymbol + 1);
-
-               //in poloniex, every asset is grouped under either BTC, ETH, XMR or USDT (e.g. BTC_ETH, BTC_XMR)
-               //their website lists them in a switched order (ETC/BTC instead of BTC_ETH), so we have to switch the symbols, too
-
-               let baseAsset = new Asset();
-               baseAsset.shortcode = secondarySymbol;
-               assetPair.primaryAsset = baseAsset;
-
-               let quoteAsset = new Asset();
-               quoteAsset.shortcode = primarySymbol;
-               assetPair.secondaryAsset = quoteAsset;
-
-               assetPair.symbol = secondarySymbol + primarySymbol;
-               assetPairs.push(assetPair);
-
-               //we can extract the ticker data from this api request
-               //this is used as an initial cached value as soon as the user requests a specific ticker message
-               let tickerMessage = new TickerMessage();
-               let tickerJson = resultJson[pairKey] as ApiTickerModel;
-
-               //safe ids/keys
-               this.symbolToProductMapping.set(assetPair.symbol, { id: tickerJson.id, productKey: pairKey });
-
-               tickerMessage.high = parseFloat(tickerJson.high24hr);
-               tickerMessage.low = parseFloat(tickerJson.low24hr);
-               tickerMessage.volume = parseFloat(tickerJson.quoteVolume);
-               tickerMessage.dailyChangePercent = parseFloat(tickerJson.percentChange) * 100;
-               tickerMessage.lastPrice = parseFloat(tickerJson.last);
-
-               this.apiTickerMessageCache.set(assetPair.symbol, tickerMessage);
+      if(this.availableAssetPairs) {
+         return Observable.of(this.availableAssetPairs);
+      }
+      else {
+         return this.apiRequestQueue.enqueue(this.apiUrl + 'returnTicker').map(result => {
+            let assetPairs: AssetPair[] = [];
+            let resultJson = result.json();
+            this.apiTickerMessageCache = new Map<string, TickerMessage>();
+            this.symbolToProductMapping = new Map<string, { id:number, productKey: string }>();
+   
+            //return empty array if request failed, log error
+            if(result.status != 200 ) {
+               console.log(`## Poloniex ## Error - Failed to request '/products'. Status code: ${result.statusText}`);
             }
-         }
-
-         assetPairs = assetPairs.sort((a, b) => {
-            let firstTicker = this.apiTickerMessageCache.get(a.symbol);
-            let secondTicker = this.apiTickerMessageCache.get(b.symbol);
-
-            return secondTicker.volume * secondTicker.lastPrice - firstTicker.volume * firstTicker.lastPrice;
+            else {
+               for(let pairKey in resultJson) {
+                  let assetPair = new AssetPair();
+   
+                  let splitSymbol = pairKey.indexOf('_');
+                  let primarySymbol  = pairKey.substring(0, splitSymbol);
+                  let secondarySymbol = pairKey.substring(splitSymbol + 1);
+   
+                  //in poloniex, every asset is grouped under either BTC, ETH, XMR or USDT (e.g. BTC_ETH, BTC_XMR)
+                  //their website lists them in a switched order (ETC/BTC instead of BTC_ETH), so we have to switch the symbols, too
+   
+                  let baseAsset = new Asset();
+                  baseAsset.shortcode = secondarySymbol;
+                  assetPair.primaryAsset = baseAsset;
+   
+                  let quoteAsset = new Asset();
+                  quoteAsset.shortcode = primarySymbol;
+                  assetPair.secondaryAsset = quoteAsset;
+   
+                  assetPair.symbol = secondarySymbol + primarySymbol;
+                  assetPairs.push(assetPair);
+   
+                  //we can extract the ticker data from this api request
+                  //this is used as an initial cached value as soon as the user requests a specific ticker message
+                  let tickerMessage = new TickerMessage();
+                  let tickerJson = resultJson[pairKey] as ApiTickerModel;
+   
+                  //safe ids/keys
+                  this.symbolToProductMapping.set(assetPair.symbol, { id: tickerJson.id, productKey: pairKey });
+   
+                  tickerMessage.high = parseFloat(tickerJson.high24hr);
+                  tickerMessage.low = parseFloat(tickerJson.low24hr);
+                  tickerMessage.volume = parseFloat(tickerJson.quoteVolume);
+                  tickerMessage.dailyChangePercent = parseFloat(tickerJson.percentChange) * 100;
+                  tickerMessage.lastPrice = parseFloat(tickerJson.last);
+   
+                  this.apiTickerMessageCache.set(assetPair.symbol, tickerMessage);
+               }
+            }
+   
+            assetPairs = assetPairs.sort((a, b) => {
+               let firstTicker = this.apiTickerMessageCache.get(a.symbol);
+               let secondTicker = this.apiTickerMessageCache.get(b.symbol);
+   
+               return secondTicker.volume * secondTicker.lastPrice - firstTicker.volume * firstTicker.lastPrice;
+            });
+   
+            this.availableAssetPairs = assetPairs;
+   
+            return assetPairs;
          });
-
-         return assetPairs;
-      });
-
+      }
    }
 
    /** Create ticker subscription instances for all assets - we can't subscribe for one asset specifically */
@@ -205,18 +287,26 @@ export class PoloniexExchangeService implements ExchangeTicker {
    getOrderBook(pair: string): OrderBook {
       return new OrderBook();
    }
+
    getOrderBookMessages(pair: string): Observable<OrderBookMessage> {
       return Observable.empty<OrderBookMessage>();
    }
+
+   /**  */
+   ensureOrderBookSubscription(productKey:string): PoloniexOrderBookSubscription {
+      return;
+   }      
+
    unsubscribeFromOrderBook(pair: string): void {
 
    }
-   getCandlesSnapshot(pair: string, timeFrame: string): Observable<CandleStick[]> {
-      let productKey = this.symbolToProductMapping.get(pair);
 
-      if(productKey) {
-         //return this.ensureCandlesSubscription(productKey, timeFrame).snapshotSubject;
-         return Observable.empty<CandleStick[]>();
+   getCandlesSnapshot(pair: string, timeFrame: string): Observable<CandleStick[]> {
+      let product = this.symbolToProductMapping.get(pair);
+
+      if(product) {
+         return this.ensureCandlesSubscription(product.productKey, timeFrame).snapshotSubject;
+         //return Observable.empty<CandleStick[]>();
       }
    }
 
