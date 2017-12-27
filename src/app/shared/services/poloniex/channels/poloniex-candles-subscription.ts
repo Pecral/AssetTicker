@@ -32,7 +32,10 @@ export class PoloniexCandlesSubscription {
 
    
    getSnapshotRequestUrl(endDate: Date):string {
-      return `returnChartData&currencyPair=${this.key}&start=1405699200&end=9999999999&period=${this.timeframeSeconds}`;
+      //copied from gdax so that we will only request 200 candles.. poloniex would allow more candles, but in some cases the requests would take quite long. We'd have to implement an additional parameter where the user can assign an optional start date
+      let startDate: Date = new Date(endDate.getTime() - (this.timeframeSeconds * 200000));
+
+      return `returnChartData&currencyPair=${this.key}&start=${startDate.getTime() / 1000}&end=9999999999&period=${this.timeframeSeconds}`;
    }
 
    /** Resolves a snapshot of candlesticks */
