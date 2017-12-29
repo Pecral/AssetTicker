@@ -6,16 +6,18 @@ import { Injectable } from '@angular/core';
 import { ExchangeTickerType } from '../models/exchange-ticker-type';
 import { GdaxExchangeService } from './gdax/gdax-exchange.service';
 import { PoloniexExchangeService } from './poloniex/poloniex-echange.service';
+import { BitstampExchangeService } from './bitstamp/bitstamp-echange.service';
 
 @Injectable()
 export class ExchangeTickerHandlerService {
 
    exchangeServiceMap : Map<ExchangeTickerType, ExchangeTicker> = new Map<ExchangeTickerType, ExchangeTicker>();
 
-   constructor(private bitfinexTicker: BitfinexTickerService, private gdaxService: GdaxExchangeService, private poloniexService: PoloniexExchangeService) { 
-      // this.exchangeServiceMap.set(ExchangeTickerType.Bitfinex, bitfinexTicker);
-      // this.exchangeServiceMap.set(ExchangeTickerType.GDAX, gdaxService);
-      this.exchangeServiceMap.set(ExchangeTickerType.Poloniex, poloniexService);
+   constructor(private bitfinexTicker: BitfinexTickerService, private gdaxService: GdaxExchangeService, private poloniexService: PoloniexExchangeService, private bitstampService: BitstampExchangeService) { 
+      this.exchangeServiceMap.set(ExchangeTickerType.Bitfinex, bitfinexTicker);
+      this.exchangeServiceMap.set(ExchangeTickerType.GDAX, gdaxService);
+      // this.exchangeServiceMap.set(ExchangeTickerType.Poloniex, poloniexService);
+      // this.exchangeServiceMap.set(ExchangeTickerType.Bitstamp, bitstampService);
    }
 
    getExchangeTicker(exchange : ExchangeTickerType): ExchangeTicker {

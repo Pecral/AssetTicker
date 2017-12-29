@@ -398,8 +398,13 @@ export class ExchangeAssetPairComponent implements OnInit, OnDestroy, OnChanges 
                .attr("height", this.dim.ohlc.height);
          }
       }
-
    }
+
+
+   inview(event: any) {
+      debugger;
+   }
+   
 
 }
 

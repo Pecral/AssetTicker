@@ -1,7 +1,8 @@
 export enum ExchangeTickerType {
     Bitfinex,
     GDAX,
-    Poloniex
+    Poloniex,
+    Bitstamp
 }
 
 export class ExchangeNameResolver {
@@ -16,6 +17,9 @@ export class ExchangeNameResolver {
          
          case "poloniex":
          return ExchangeTickerType.Poloniex;
+
+         case "bitstamp":
+         return ExchangeTickerType.Bitstamp;
       }
 
       return;

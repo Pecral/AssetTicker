@@ -208,6 +208,13 @@ export class AssetOverviewComponent implements OnInit {
       //filter assets if it doesn't contain any exchange-asset-pair that fits the current search
       this.filteredAssets = this.availableAssets.filter(asset => this.getExchangeAssetPairs(asset, false).length > 0 );
    }
+
+   
+   inview(pair: ExchangeAssetPair) {
+      //debugger;
+      console.log(`Traded pair: ${pair.pair.symbol} - exchange: ${pair.exchange}`);
+   }
+
 }
 
 class SearchItem {

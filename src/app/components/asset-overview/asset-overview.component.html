@@ -20,8 +20,8 @@
       </div>
     </a>
     <div class="exchange-asset-pairs">
-      <a [routerLink]="tradedPair.exchange + '/' + tradedPair.pair.symbol + '/15m'" *ngFor="let tradedPair of getExchangeAssetPairs(asset, true)">
-        <div class="exchange-pair-wrapper">
+      <a [routerLink]="tradedPair.exchange + '/' + tradedPair.pair.symbol + '/15m'" *ngFor="let tradedPair of getExchangeAssetPairs(asset, true)"  in-view (inview)="inview(tradedPair)">
+        <div class="exchange-pair-wrapper" in-view (inview)="inview(tradedPair)">
           <exchange-asset-pair class="mark-hover" [exchangeAssetPair]="tradedPair" [drawHeader]="false"></exchange-asset-pair>
         </div>
       </a>

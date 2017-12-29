@@ -27,6 +27,10 @@ import { AutoCompleteModule, DropdownModule } from 'primeng/primeng';
 import { PerfectScrollbarModule, PerfectScrollbarConfigInterface } from 'ngx-perfect-scrollbar';
 import { CurrencyValueFormatterPipe } from './shared/pipes/currency-value-formatter.pipe';
 import { PoloniexExchangeService } from './shared/services/poloniex/poloniex-echange.service';
+import { BitstampExchangeService } from './shared/services/bitstamp/bitstamp-echange.service';
+
+/** Directives */
+import { NgInviewModule } from 'angular-inport';
 
 const PERFECT_SCROLLBAR_CONFIG: PerfectScrollbarConfigInterface = {
    suppressScrollX: true
@@ -61,6 +65,7 @@ const appRoutes: Routes = [
 
       AutoCompleteModule,
       DropdownModule,
+      NgInviewModule,
 
       PerfectScrollbarModule.forRoot(PERFECT_SCROLLBAR_CONFIG)
    ],
@@ -70,6 +75,7 @@ const appRoutes: Routes = [
       BitfinexTickerService,
       GdaxExchangeService,
       PoloniexExchangeService,
+      BitstampExchangeService,
       D3Service,
 
       AssetHandlerService,
